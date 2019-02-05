@@ -236,6 +236,14 @@ module ActiveEntity
       Hash[methods.flatten.map! { |method| [method, public_send(method)] }].with_indifferent_access
     end
 
+    def present? # :nodoc:
+      true
+    end
+
+    def blank? # :nodoc:
+      false
+    end
+
     private
 
       # +Array#flatten+ will call +#to_ary+ (recursively) on each of the elements of
