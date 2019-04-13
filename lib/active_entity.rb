@@ -4,6 +4,8 @@ require "active_support"
 require "active_support/rails"
 require "yaml"
 
+require "core_ext/array_without_blank"
+
 require "active_model"
 require "active_model/attribute_set"
 

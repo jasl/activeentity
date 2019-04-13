@@ -16,7 +16,7 @@ log/*.log
 !test/dummy/log/.keep
 !test/dummy/tmp/.keep
 test/dummy/log/*.log
-test/dummy/tmp/
+test/dummy/tmp/*
 
 # Ignore uploaded files in development
 test/dummy/storage/*

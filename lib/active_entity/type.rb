@@ -13,6 +13,7 @@ require "active_entity/type/text"
 require "active_entity/type/unsigned_integer"
 
 require "active_entity/type/modifiers/array"
+require "active_entity/type/modifiers/array_without_blank"
 
 require "active_entity/type/serialized"
 require "active_entity/type/registry"
@@ -56,6 +57,7 @@ module ActiveEntity
     Value = ActiveModel::Type::Value
 
     add_modifier({ array: true }, Modifiers::Array)
+    add_modifier({ array_without_blank: true }, Modifiers::ArrayWithoutBlank)
 
     register(:big_integer, Type::BigInteger, override: false)
     register(:binary, Type::Binary, override: false)
