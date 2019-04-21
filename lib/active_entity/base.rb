@@ -280,6 +280,7 @@ module ActiveEntity #:nodoc:
     extend Aggregations::ClassMethods
 
     include Core
+    include Persistence
     include ReadonlyAttributes
     include ModelSchema
     include Inheritance

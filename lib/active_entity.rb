@@ -21,6 +21,7 @@ module ActiveEntity
   autoload :Integration
   autoload :ModelSchema
   autoload :NestedAttributes
+  autoload :Persistence
   autoload :ReadonlyAttributes
   autoload :Reflection
   autoload :Serialization
