@@ -15,7 +15,7 @@ gemspec
 
 # Your gem is dependent on dev or edge Rails. Once you can lock this
 # dependency down to a specific version, move it to your gemspec.
-gem "rails", ">= 6.0.0.beta3"
+gem "rails", ">= 6.0.0.rc1"
 
 # Use Puma as the app server
 gem "puma", "~> 3.11"
