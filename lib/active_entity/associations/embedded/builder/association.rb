@@ -34,10 +34,13 @@ module ActiveEntity::Associations::Embedded::Builder # :nodoc:
       reflection
     end
 
-    def self.create_reflection(model, name, options)
+    def self.create_reflection(model, name, options, &block)
       raise ArgumentError, "association names must be a Symbol" unless name.kind_of?(Symbol)
 
       validate_options(options)
+
+      extension = define_extensions(model, name, &block)
+      options[:extend] = [*options[:extend], extension] if extension
 
       ActiveEntity::Reflection.create(macro, name, nil, options, model)
     end
@@ -52,6 +55,9 @@ module ActiveEntity::Associations::Embedded::Builder # :nodoc:
 
     def self.validate_options(options)
       options.assert_valid_keys(valid_options(options))
+    end
+
+    def self.define_extensions(model, name)
     end
 
     def self.define_callbacks(model, reflection)
@@ -93,8 +99,7 @@ module ActiveEntity::Associations::Embedded::Builder # :nodoc:
       # noop
     end
 
-    def self.valid_dependent_options
-      raise NotImplementedError
-    end
+    private_class_method :macro, :valid_options, :validate_options, :define_extensions,
+                         :define_callbacks, :define_accessors, :define_readers, :define_writers, :define_validations
   end
 end

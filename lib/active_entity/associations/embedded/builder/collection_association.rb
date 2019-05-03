@@ -19,11 +19,11 @@ module ActiveEntity::Associations::Embedded::Builder # :nodoc:
       }
     end
 
-    def self.define_extensions(model, name)
+    def self.define_extensions(model, name, &block)
       if block_given?
-        extension_module_name = "#{model.name.demodulize}#{name.to_s.camelize}AssociationExtension"
-        extension = Module.new(&Proc.new)
-        model.module_parent.const_set(extension_module_name, extension)
+        extension_module_name = "#{name.to_s.camelize}AssociationExtension"
+        extension = Module.new(&block)
+        model.const_set(extension_module_name, extension)
       end
     end
 
@@ -65,5 +65,7 @@ module ActiveEntity::Associations::Embedded::Builder # :nodoc:
         end
       CODE
     end
+
+    private_class_method :valid_options, :define_callback, :define_extensions, :define_readers, :define_writers
   end
 end

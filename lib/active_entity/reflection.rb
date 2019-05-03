@@ -15,8 +15,11 @@ module ActiveEntity
 
     class << self
       def create(macro, name, scope, options, ar_or_ae)
-        reflection = reflection_class_for(macro).new(name, scope, options, ar_or_ae)
-        options[:through] ? ThroughReflection.new(reflection) : reflection
+        reflection_class_for(macro).new(name, scope, options, ar_or_ae)
+
+        # TODO: Support bridge to Active Record
+        # reflection = reflection_class_for(macro).new(name, scope, options, ar_or_ae)
+        # options[:through] ? ActiveRecord::ThroughReflection.new(reflection) : reflection
       end
 
       def add_reflection(ar_or_ae, name, reflection)
