@@ -10,7 +10,7 @@ module ActiveEntity
     MAJOR = 0
     MINOR = 0
     TINY  = 1
-    PRE   = "beta6"
+    PRE   = "beta7"
 
     STRING = [MAJOR, MINOR, TINY, PRE].compact.join(".")
   end

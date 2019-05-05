@@ -124,9 +124,20 @@ module ActiveEntity
         # Replace this collection with +other_array+. This will perform a diff
         # and delete/add only records that have changed.
         def replace(other_array)
-          other_array.each { |val| raise_on_type_mismatch!(val) }
+          records = other_array.map do |val|
+            if val.is_a? reflection.klass
+              val
+            elsif val.nil?
+              next
+            elsif val.respond_to?(:to_h)
+              build_record(val.to_h)
+            end
+          rescue => ex
+            raise_on_type_mismatch!(val)
+            raise ex
+          end
 
-          target.replace other_array
+          target.replace records
         end
 
         def include?(record)
