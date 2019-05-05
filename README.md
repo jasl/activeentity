@@ -35,7 +35,8 @@ class Holiday < ActiveEntity::Base
 end
 
 class HolidaysForm < ActiveEntity::Base
-  embeds_many :holidays, reject_if: :all_blank
+  embeds_many :holidays
+  accepts_nested_attributes_for :holidays, reject_if: :all_blank
 end
 ```
 
