@@ -26,7 +26,7 @@ One enhancement is `array: true` that transform the attribute to an array that c
 
 ### Nested attributes
 
-Active Entity supports its own variant of nested attributes via the `embeds_one` / `embeds_many` macros. The intention is to be mostly compatible with ActiveRecord's `accepts_nested_attributes` functionality.
+Active Entity supports its own variant of nested attributes via the `embeds_one` / `embeds_many` macros. The intention is to be mostly compatible with ActiveRecord's `accepts_nested_attributes_for` functionality.
 
 ```ruby
 class Holiday < ActiveEntity::Base
