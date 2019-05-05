@@ -147,8 +147,18 @@ module ActiveEntity
 
           def concat_records(records)
             records.each do |record|
+              r =
+                if record.is_a? reflection.klass
+                  record
+                elsif record.nil?
+                  nil
+                elsif record.respond_to?(:to_h)
+                  build_record(record.to_h)
+                end
+              add_to_target(r)
+            rescue => ex
               raise_on_type_mismatch!(record)
-              add_to_target(record)
+              raise ex
             end
 
             records

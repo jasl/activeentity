@@ -7,11 +7,17 @@ module ActiveEntity
       class EmbedsOneAssociation < SingularAssociation #:nodoc:
         private
           def replace(record)
-            raise_on_type_mismatch!(record) if record
-
-            return target unless record
-
-            self.target = record
+            self.target =
+              if record.is_a? reflection.klass
+                record
+              elsif record.nil?
+                nil
+              elsif record.respond_to?(:to_h)
+                build_record(record.to_h)
+              end
+          rescue => ex
+            raise_on_type_mismatch!(record)
+            raise ex
           end
       end
     end
