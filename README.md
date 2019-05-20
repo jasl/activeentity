@@ -138,7 +138,7 @@ Tested extensions:
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'activeentity'
+gem 'activeentity', require: "active_entity/railtie"
 ```
 
 And then execute:
