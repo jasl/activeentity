@@ -134,7 +134,7 @@ GEM
       thor (>= 0.20.3, < 2.0)
     rainbow (3.0.0)
     rake (12.3.2)
-    rubocop (0.69.0)
+    rubocop (0.70.0)
       jaro_winkler (~> 1.5.1)
       parallel (~> 1.10)
       parser (>= 2.6)
@@ -151,6 +151,7 @@ GEM
       actionpack (>= 4.0)
       activesupport (>= 4.0)
       sprockets (>= 3.0.0)
+    sqlite3 (1.4.1)
     thor (0.20.3)
     thread_safe (0.3.6)
     tzinfo (1.2.5)
@@ -177,6 +178,7 @@ DEPENDENCIES
   rails (>= 6.0.0.rc1)
   rubocop
   rubocop-performance
+  sqlite3 (~> 1.4)
   web-console
 
 BUNDLED WITH

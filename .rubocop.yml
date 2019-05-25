@@ -9,6 +9,7 @@ AllCops:
     - '**/templates/**/*'
     - '**/vendor/**/*'
     - 'node_modules/**/*'
+    - 'test/dummy/db/schema.rb'
 
 Performance:
   Exclude:

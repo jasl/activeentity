@@ -17,6 +17,8 @@ gemspec
 # dependency down to a specific version, move it to your gemspec.
 gem "rails", ">= 6.0.0.rc1"
 
+gem "sqlite3", "~> 1.4"
+
 # Use Puma as the app server
 gem "puma", "~> 3.11"
 # Use SCSS for stylesheets
