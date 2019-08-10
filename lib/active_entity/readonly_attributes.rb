@@ -8,28 +8,28 @@ module ActiveEntity
       class_attribute :_attr_readonly, instance_accessor: false, default: []
     end
 
-    def disable_readonly!
-      @_readonly_enabled = false
+    def disable_attr_readonly!
+      @_attr_readonly_enabled = false
     end
 
-    def enable_readonly!
-      @_readonly_enabled = true
+    def enable_attr_readonly!
+      @_attr_readonly_enabled = true
     end
 
-    def enable_readonly
+    def enable_attr_readonly
       return unless block_given?
 
-      disable_readonly!
+      disable_attr_readonly!
       yield self
-      enable_readonly!
+      enable_attr_readonly!
 
       self
     end
 
-    def _readonly_enabled
-      @_readonly_enabled
+    def _attr_readonly_enabled
+      @_attr_readonly_enabled
     end
-    alias readonly_enabled? _readonly_enabled
+    alias attr_readonly_enabled? _attr_readonly_enabled
 
     module ClassMethods
       # Attributes listed as readonly will be used to create a new record but update operations will
