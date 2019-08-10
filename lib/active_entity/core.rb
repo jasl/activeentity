@@ -92,7 +92,7 @@ module ActiveEntity
       yield self if block_given?
       _run_initialize_callbacks
 
-      enable_readonly!
+      enable_attr_readonly!
     end
 
     ##
