@@ -26,6 +26,7 @@ module ActiveEntity
       end
 
       private
+
         # Handle *? for method_missing.
         def attribute?(attribute_name)
           query_attribute(attribute_name)

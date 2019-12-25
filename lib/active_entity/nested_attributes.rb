@@ -465,10 +465,10 @@ module ActiveEntity
         if attributes_collection.is_a? Hash
           keys = attributes_collection.keys
           attributes_collection = if keys.include?("id") || keys.include?(:id)
-                                    [attributes_collection]
-                                  else
-                                    attributes_collection.values
-                                  end
+            [attributes_collection]
+          else
+            attributes_collection.values
+          end
         end
 
         association = association(association_name)

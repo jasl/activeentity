@@ -33,6 +33,7 @@ module ActiveEntity
       end
 
       private
+
         def reflection_class_for(macro)
           case macro
           when :composed_of
@@ -184,6 +185,7 @@ module ActiveEntity
       end
 
       protected
+
         def actual_source_reflection # FIXME: this is a horrible name
           self
         end
@@ -248,6 +250,7 @@ module ActiveEntity
       end
 
       private
+
         def derive_class_name
           name.to_s.camelize
         end

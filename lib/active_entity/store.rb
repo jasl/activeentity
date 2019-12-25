@@ -155,6 +155,7 @@ module ActiveEntity
     end
 
     private
+
       def read_store_attribute(store_attribute, key) # :doc:
         accessor = store_accessor_for(store_attribute)
         accessor.read(self, store_attribute, key)

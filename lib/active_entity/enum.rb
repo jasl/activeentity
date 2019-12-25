@@ -124,6 +124,7 @@ module ActiveEntity
       end
 
       private
+
         attr_reader :name, :mapping, :subtype
     end
 
@@ -182,6 +183,7 @@ module ActiveEntity
     end
 
     private
+
       def _enum_methods_module
         @_enum_methods_module ||= begin
           mod = Module.new

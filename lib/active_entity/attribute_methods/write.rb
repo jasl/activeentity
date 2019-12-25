@@ -48,6 +48,7 @@ module ActiveEntity
       end
 
       private
+
         def write_attribute_without_type_cast(attr_name, value)
           name = attr_name.to_s
           @attributes.write_cast_value(name, value)

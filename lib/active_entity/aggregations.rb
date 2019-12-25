@@ -234,6 +234,7 @@ module ActiveEntity
         end
 
         private
+
           def reader_method(name, class_name, mapping, allow_nil, constructor)
             define_method(name) do
               if @aggregation_cache[name].nil? && (!allow_nil || mapping.any? { |key, _| !_read_attribute(key).nil? })

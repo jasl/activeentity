@@ -6,6 +6,7 @@ module ActiveEntity
       # = Active Entity Has One Association
       class EmbedsOneAssociation < SingularAssociation #:nodoc:
         private
+
           def replace(record)
             self.target =
               if record.is_a? reflection.klass

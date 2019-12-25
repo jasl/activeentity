@@ -88,6 +88,7 @@ module ActiveEntity
     end
 
     private
+
       # Clears out the association cache.
       def clear_association_cache
         @association_cache.clear if persisted?

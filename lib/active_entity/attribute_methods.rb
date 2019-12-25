@@ -302,6 +302,7 @@ module ActiveEntity
     end
 
     private
+
       def attribute_method?(attr_name)
         # We check defined? because Syck calls respond_to? before actually calling initialize.
         defined?(@attributes) && @attributes.key?(attr_name)
