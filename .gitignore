@@ -32,4 +32,8 @@ yarn-error.log
 
 *.gem
 
+.env
 .rakeTasks
+/sqlnet.log
+/test/config.yml
+/test/fixtures/*.sqlite*
