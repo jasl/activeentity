@@ -6,7 +6,7 @@ module ActiveEntity
   # == Single table inheritance
   #
   # Active Entity allows inheritance by storing the name of the class in a column that by
-  # default is named "type" (can be changed by overwriting <tt>Base.inheritance_attribute</tt>).
+  # default is named "type" (can be changed by overwriting <tt>Base.inheritance_column</tt>).
   # This means that an inheritance looking like this:
   #
   #   class Company < ActiveEntity::Base; end
@@ -37,12 +37,6 @@ module ActiveEntity
   module Inheritance
     extend ActiveSupport::Concern
 
-    included do
-      # Determines whether to store the full constant name including namespace when using STI.
-      # This is true, by default.
-      class_attribute :store_full_sti_class, instance_writer: false, default: true
-    end
-
     module ClassMethods
       # Determines if one of the attributes passed in is the inheritance column,
       # and if the inheritance column is attr accessible, it initializes an
@@ -52,19 +46,7 @@ module ActiveEntity
           raise NotImplementedError, "#{self} is an abstract class and cannot be instantiated."
         end
 
-        if has_attribute?(inheritance_attribute)
-          subclass = subclass_from_attributes(attributes)
-
-          if subclass.nil? && base_class?
-            subclass = subclass_from_attributes(_default_attributes)
-          end
-        end
-
-        if subclass && subclass != self
-          subclass.new(attributes, &block)
-        else
-          super
-        end
+        super
       end
 
       # Returns +true+ if this does not need STI type condition. Returns
@@ -75,13 +57,8 @@ module ActiveEntity
         elsif superclass.abstract_class?
           superclass.descends_from_active_entity?
         else
-          superclass == Base || !has_attribute?(inheritance_attribute)
+          superclass == Base
         end
-      end
-
-      def finder_needs_type_condition? #:nodoc:
-        # This is like this because benchmarking justifies the strange :false stuff
-        :true == (@finder_needs_type_condition ||= descends_from_active_entity? ? :false : :true)
       end
 
       # Returns the class descending directly from ActiveEntity::Base, or
@@ -94,7 +71,7 @@ module ActiveEntity
       # and C.base_class would return B as the answer since A is an abstract_class.
       def base_class
         unless self < Base
-          raise ActiveEntityError, "#{name} doesn't belong in a hierarchy descending from Active Entity"
+          raise ActiveEntityError, "#{name} doesn't belong in a hierarchy descending from ActiveEntity"
         end
 
         if superclass == Base || superclass.abstract_class?
@@ -158,10 +135,6 @@ module ActiveEntity
         defined?(@abstract_class) && @abstract_class == true
       end
 
-      def sti_name
-        store_full_sti_class ? name : name.demodulize
-      end
-
       def inherited(subclass)
         subclass.instance_variable_set(:@_type_candidates_cache, Concurrent::Map.new)
         super
@@ -198,81 +171,6 @@ module ActiveEntity
             raise NameError.new("uninitialized constant #{candidates.first}", candidates.first)
           end
         end
-
-      private
-
-        # Called by +instantiate+ to decide which class to use for a new
-        # record instance. For single-table inheritance, we check the record
-        # for a +type+ column and return the corresponding class.
-        def discriminate_class_for_record(record)
-          if using_single_table_inheritance?(record)
-            find_sti_class(record[inheritance_attribute])
-          else
-            super
-          end
-        end
-
-        def using_single_table_inheritance?(record)
-          record[inheritance_attribute].present? && has_attribute?(inheritance_attribute)
-        end
-
-        def find_sti_class(type_name)
-          type_name = base_class.type_for_attribute(inheritance_attribute).cast(type_name)
-          subclass = begin
-            if store_full_sti_class
-              ActiveSupport::Dependencies.constantize(type_name)
-            else
-              compute_type(type_name)
-            end
-          rescue NameError
-            raise SubclassNotFound,
-                  "The single-table inheritance mechanism failed to locate the subclass: '#{type_name}'. " \
-                  "This error is raised because the attribute '#{inheritance_attribute}' is reserved for storing the class in case of inheritance. " \
-                  "Please rename this attribute if you didn't intend it to be used for storing the inheritance class " \
-                  "or overwrite #{name}.inheritance_attribute to use another attribute for that information."
-          end
-          unless subclass == self || descendants.include?(subclass)
-            raise SubclassNotFound, "Invalid single-table inheritance type: #{subclass.name} is not a subclass of #{name}"
-          end
-          subclass
-        end
-
-        # Detect the subclass from the inheritance column of attrs. If the inheritance column value
-        # is not self or a valid subclass, raises ActiveEntity::SubclassNotFound
-        def subclass_from_attributes(attrs)
-          attrs = attrs.to_h if attrs.respond_to?(:permitted?)
-          if attrs.is_a?(Hash)
-            subclass_name = attrs[inheritance_attribute] || attrs[inheritance_attribute.to_sym]
-
-            if subclass_name.present?
-              find_sti_class(subclass_name)
-            end
-          end
-        end
     end
-
-    def initialize_dup(other)
-      super
-      ensure_proper_type
-    end
-
-    private
-
-      def initialize_internals_callback
-        super
-        ensure_proper_type
-      end
-
-      # Sets the attribute used for single table inheritance to this class name if this is not the
-      # ActiveEntity::Base descendant.
-      # Considering the hierarchy Reply < Message < ActiveEntity::Base, this makes it possible to
-      # do Reply.new without having to set <tt>Reply[Reply.inheritance_attribute] = "Reply"</tt> yourself.
-      # No such attribute would be set for objects of the Message class in that example.
-      def ensure_proper_type
-        klass = self.class
-        if klass.finder_needs_type_condition?
-          _write_attribute(klass.inheritance_attribute, klass.sti_name)
-        end
-      end
   end
 end

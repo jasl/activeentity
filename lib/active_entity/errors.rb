@@ -7,13 +7,6 @@ module ActiveEntity
   class ActiveEntityError < StandardError
   end
 
-  # Raised when the single-table inheritance mechanism fails to locate the subclass
-  # (for example due to improper usage of column that
-  # {ActiveEntity::Base.inheritance_attribute}[rdoc-ref:ModelSchema::ClassMethods#inheritance_attribute]
-  # points to).
-  class SubclassNotFound < ActiveEntityError
-  end
-
   # Raised when an object assigned to an association has an incorrect type.
   #
   #   class Ticket < ActiveEntity::Base
@@ -39,10 +32,6 @@ module ActiveEntity
   # {ActiveEntity::Base.has_and_belongs_to_many}[rdoc-ref:Associations::ClassMethods#has_and_belongs_to_many]
   # associations.
   class ConfigurationError < ActiveEntityError
-  end
-
-  # Raised on attempt to update record that is instantiated as read only.
-  class ReadOnlyRecord < ActiveEntityError
   end
 
   # Raised when attribute has a name reserved by Active Entity (when attribute

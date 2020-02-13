@@ -2,7 +2,7 @@
 
 module ActiveEntity
   module Associations
-    module Embedded
+    module Embeds
       # = Active Entity Belongs To Association
       class EmbeddedInAssociation < SingularAssociation #:nodoc:
         def default(&block)

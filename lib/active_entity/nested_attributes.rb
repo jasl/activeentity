@@ -2,7 +2,6 @@
 
 require "active_support/core_ext/hash/except"
 require "active_support/core_ext/module/redefine_method"
-require "active_support/core_ext/object/try"
 require "active_support/core_ext/hash/indifferent_access"
 
 module ActiveEntity
@@ -289,7 +288,7 @@ module ActiveEntity
       # [:allow_destroy]
       #   If true, destroys any members from the attributes hash with a
       #   <tt>_destroy</tt> key and a value that evaluates to +true+
-      #   (eg. 1, '1', true, or 'true'). This option is off by default.
+      #   (e.g. 1, '1', true, or 'true'). This option is off by default.
       # [:reject_if]
       #   Allows you to specify a Proc or a Symbol pointing to a method
       #   that checks whether a record should be built for a certain attribute
@@ -550,12 +549,6 @@ module ActiveEntity
 
       def allow_destroy?(association_name)
         nested_attributes_options[association_name][:allow_destroy]
-      end
-
-      def raise_nested_attributes_record_not_found!(association_name, record_id)
-        model = self.class._reflect_on_association(association_name).klass.name
-        raise RecordNotFound.new("Couldn't find #{model} with ID=#{record_id} for #{self.class.name} with ID=#{id}",
-                                 model, "id", record_id)
       end
   end
 end

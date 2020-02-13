@@ -127,12 +127,12 @@ module ActiveEntity
   # Now it _is_ removed from the database:
   #
   #   Comment.find_by(id: id).nil? # => true
-  module ValidateEmbeddedAssociation
+  module ValidateEmbedsAssociation
     extend ActiveSupport::Concern
 
     module AssociationBuilderExtension #:nodoc:
       def self.build(model, reflection)
-        model.send(:add_embedded_associations_validation_callbacks, reflection)
+        model.send(:add_embeds_associations_validation_callbacks, reflection)
       end
 
       def self.valid_options
@@ -141,7 +141,7 @@ module ActiveEntity
     end
 
     included do
-      Associations::Embedded::Builder::Association.extensions << AssociationBuilderExtension
+      Associations::Embeds::Builder::Association.extensions << AssociationBuilderExtension
 
       unless respond_to?(:index_nested_attribute_errors)
         mattr_accessor :index_nested_attribute_errors, instance_writer: false, default: false
@@ -180,11 +180,11 @@ module ActiveEntity
         # the callbacks to get defined multiple times, there are guards that
         # check if the save or validation methods have already been defined
         # before actually defining them.
-        def add_embedded_associations_validation_callbacks(reflection)
-          define_embedded_associations_validation_callbacks(reflection)
+        def add_embeds_associations_validation_callbacks(reflection)
+          define_embeds_associations_validation_callbacks(reflection)
         end
 
-        def define_embedded_associations_validation_callbacks(reflection)
+        def define_embeds_associations_validation_callbacks(reflection)
           validation_method = :"validate_associated_records_for_#{reflection.name}"
           if reflection.validate? && !method_defined?(validation_method)
             if reflection.collection?

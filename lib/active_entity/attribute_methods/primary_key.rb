@@ -90,7 +90,7 @@ module ActiveEntity
           #
           #   Project.primary_key # => "foo_id"
           def primary_key=(value)
-            @primary_key = value&.to_s
+            @primary_key = value && -value.to_s
           end
         end
     end

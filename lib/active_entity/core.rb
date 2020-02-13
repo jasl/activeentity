@@ -58,11 +58,9 @@ module ActiveEntity
       def inspect # :nodoc:
         if self == Base
           super
-        elsif abstract_class?
-          "#{super}(abstract)"
         else
           attr_list = attribute_types.map { |name, type| "#{name}: #{type.type}" } * ", "
-          "#{super}(#{attr_list})"
+          "#{super}#{ "(abstract)" if abstract_class? }(#{attr_list})"
         end
       end
 
@@ -81,7 +79,6 @@ module ActiveEntity
     #   # Instantiates a single new object
     #   User.new(first_name: 'Jamie')
     def initialize(attributes = nil)
-      self.class.define_attribute_methods
       @attributes = self.class._default_attributes.deep_dup
 
       init_internals
@@ -93,6 +90,42 @@ module ActiveEntity
       _run_initialize_callbacks
 
       enable_attr_readonly!
+    end
+
+    # Initialize an empty model object from +coder+. +coder+ should be
+    # the result of previously encoding an Active Entity model, using
+    # #encode_with.
+    #
+    #   class Post < ActiveEntity::Base
+    #   end
+    #
+    #   old_post = Post.new(title: "hello world")
+    #   coder = {}
+    #   old_post.encode_with(coder)
+    #
+    #   post = Post.allocate
+    #   post.init_with(coder)
+    #   post.title # => 'hello world'
+    def init_with(coder, &block)
+      attributes = self.class.yaml_encoder.decode(coder)
+      init_with_attributes(attributes, coder["new_record"], &block)
+    end
+
+    ##
+    # Initialize an empty model object from +attributes+.
+    # +attributes+ should be an attributes object, and unlike the
+    # `initialize` method, no assignment calls are made per attribute.
+    def init_with_attributes(attributes) # :nodoc:
+      @attributes = attributes
+
+      init_internals
+
+      yield self if block_given?
+
+      _run_find_callbacks
+      _run_initialize_callbacks
+
+      self
     end
 
     ##
@@ -147,6 +180,33 @@ module ActiveEntity
       coder["active_entity_yaml_version"] = 2
     end
 
+    # Returns true if +comparison_object+ is the same exact object, or +comparison_object+
+    # is of the same type and +self+ has an ID and it is equal to +comparison_object.id+.
+    #
+    # Note that new records are different from any other record by definition, unless the
+    # other record is the receiver itself. Besides, if you fetch existing records with
+    # +select+ and leave the ID out, you're on your own, this predicate will return false.
+    #
+    # Note also that destroying a record preserves its ID in the model instance, so deleted
+    # models are still comparable.
+    def ==(comparison_object)
+      super ||
+        comparison_object.instance_of?(self.class) &&
+        !id.nil? &&
+        comparison_object.id == id
+    end
+    alias :eql? :==
+
+    # Delegates to id in order to allow two records of the same type and id to work with something like:
+    #   [ Person.find(1), Person.find(2), Person.find(3) ] & [ Person.find(1), Person.find(4) ] # => [ Person.find(1) ]
+    def hash
+      if id
+        self.class.hash ^ id.hash
+      else
+        super
+      end
+    end
+
     # Clone and freeze the attributes hash such that associations are still
     # accessible, even on destroyed records, but cloned models will not be
     # frozen.
@@ -169,6 +229,14 @@ module ActiveEntity
       end
     end
 
+    def present? # :nodoc:
+      true
+    end
+
+    def blank? # :nodoc:
+      false
+    end
+
     # Returns +true+ if the record is read only. Records loaded through joins with piggy-back
     # attributes will be marked as read only since they cannot be saved.
     def readonly?
@@ -184,24 +252,22 @@ module ActiveEntity
     def inspect
       # We check defined?(@attributes) not to issue warnings if the object is
       # allocated but not initialized.
-      inspection =
-        if defined?(@attributes) && @attributes
-          self.class.attribute_names.collect do |name|
-            if has_attribute?(name)
-              attr = _read_attribute(name)
-              value =
-                if attr.nil?
-                  attr.inspect
-                else
-                  attr = format_for_inspect(attr)
-                  inspection_filter.filter_param(name, attr)
-                end
-              "#{name}: #{value}"
+      inspection = if defined?(@attributes) && @attributes
+        self.class.attribute_names.collect do |name|
+          if has_attribute?(name)
+            attr = _read_attribute(name)
+            value = if attr.nil?
+              attr.inspect
+            else
+              attr = format_for_inspect(attr)
+              inspection_filter.filter_param(name, attr)
             end
-          end.compact.join(", ")
-        else
-          "not initialized"
-        end
+            "#{name}: #{value}"
+          end
+        end.compact.join(", ")
+      else
+        "not initialized"
+      end
 
       "#<#{self.class} #{inspection}>"
     end
@@ -236,14 +302,6 @@ module ActiveEntity
       Hash[methods.flatten.map! { |method| [method, public_send(method)] }].with_indifferent_access
     end
 
-    def present? # :nodoc:
-      true
-    end
-
-    def blank? # :nodoc:
-      false
-    end
-
     private
 
       # +Array#flatten+ will call +#to_ary+ (recursively) on each of the elements of
@@ -261,27 +319,27 @@ module ActiveEntity
       def init_internals
         @readonly                 = false
         @marked_for_destruction   = false
+
+        self.class.define_attribute_methods
       end
 
       def initialize_internals_callback
-      end
-
-      def thaw
-        if frozen?
-          @attributes = @attributes.dup
-        end
       end
 
       def custom_inspect_method_defined?
         self.class.instance_method(:inspect).owner != ActiveEntity::Base.instance_method(:inspect).owner
       end
 
+      class InspectionMask < DelegateClass(::String)
+        def pretty_print(pp)
+          pp.text __getobj__
+        end
+      end
+      private_constant :InspectionMask
+
       def inspection_filter
         @inspection_filter ||= begin
-          mask = DelegateClass(::String).new(ActiveSupport::ParameterFilter::FILTERED)
-          def mask.pretty_print(pp)
-            pp.text __getobj__
-          end
+          mask = InspectionMask.new(ActiveSupport::ParameterFilter::FILTERED)
           ActiveSupport::ParameterFilter.new(self.class.filter_attributes, mask: mask)
         end
       end

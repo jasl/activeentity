@@ -12,61 +12,67 @@ module ActiveEntity
           raise ArgumentError, "#{options[:scope]} is not supported format for :scope option. " \
             "Pass a symbol or an array of symbols instead: `scope: :user_id`"
         end
-
         super
 
-        @finder_class =
-          if options[:ar_class_name].present?
-            options[:ar_class_name].safe_constantize
-          elsif options[:ar_class].present? && options[:ar_class].is_a?(Class)
-            options[:ar_class]
+        @klass =
+          if options[:class].present?
+            options[:class]
+          elsif options[:class_name].present?
+            options[:class_name].safe_constantize
           else
             nil
           end
 
-        unless @finder_class
+        unless @klass
           raise ArgumentError, "Must provide one of option :class_name or :class."
         end
-        unless @finder_class < ActiveRecord::Base
-          raise ArgumentError, "Class must be an Active Record model, but got #{@finder_class}."
+        unless @klass < ActiveRecord::Base
+          raise ArgumentError, "Class must be an Active Entity model, but got #{@finder_class}."
         end
-        if @finder_class.abstract_class?
+        if @klass.abstract_class?
           raise ArgumentError, "Class can't be an abstract class."
         end
-
-        @primary_key_attribute_name = options[:primary_key_attribute_name]
-        @present_only = options[:present_only]
       end
 
       def validate_each(record, attribute, value)
-        value = map_enum_attribute(@finder_class, attribute, value)
-        if @present_only && value.blank?
-          return
-        end
+        finder_class = find_finder_class_for(record)
+        value = map_enum_attribute(finder_class, attribute, value)
 
-        relation = build_relation(@finder_class, attribute, value)
-        if @primary_key_attribute_name.present?
-          primary_key_attribute = record.read_attribute(@primary_key_attribute_name)
-          if primary_key_attribute.present?
-            if @finder_class.primary_key
-              relation = relation.where.not(@finder_class.primary_key => primary_key_attribute)
-            else
-              raise ActiveRecord::UnknownPrimaryKey.new(@finder_class, "Can not validate uniqueness for persisted record without primary key.")
-            end
+        relation = build_relation(finder_class, attribute, value)
+        if record.persisted?
+          if finder_class.primary_key
+            relation = relation.where.not(finder_class.primary_key => record.id_in_database)
+          else
+            raise UnknownPrimaryKey.new(finder_class, "Cannot validate uniqueness for persisted record without primary key.")
           end
         end
         relation = scope_relation(record, relation)
         relation = relation.merge(options[:conditions]) if options[:conditions]
 
         if relation.exists?
-          error_options = options.except(:case_sensitive, :scope, :conditions, :ar_class, :ar_class_name, :primary_key_attribute_name)
+          error_options = options.except(:case_sensitive, :scope, :conditions)
           error_options[:value] = value
 
-          record.errors.add(attribute, :taken, error_options)
+          record.errors.add(attribute, :taken, **error_options)
         end
       end
 
     private
+
+      # The check for an existing value should be run from a class that
+      # isn't abstract. This means working down from the current class
+      # (self), to the first non-abstract class. Since classes don't know
+      # their subclasses, we have to build the hierarchy between self and
+      # the record's class.
+      def find_finder_class_for(record)
+        class_hierarchy = [record.class]
+
+        while class_hierarchy.first != @klass
+          class_hierarchy.unshift(class_hierarchy.first.superclass)
+        end
+
+        class_hierarchy.detect { |klass| !klass.abstract_class? }
+      end
 
       def build_relation(klass, attribute, value)
         relation = klass.unscoped
@@ -111,14 +117,14 @@ module ActiveEntity
       # across the system. Useful for making sure that only one user
       # can be named "davidhh".
       #
-      #   class Person < ActiveRecord::Base
+      #   class Person < ActiveEntity::Base
       #     validates_uniqueness_of :user_name
       #   end
       #
       # It can also validate whether the value of the specified attributes are
       # unique based on a <tt>:scope</tt> parameter:
       #
-      #   class Person < ActiveRecord::Base
+      #   class Person < ActiveEntity::Base
       #     validates_uniqueness_of :user_name, scope: :account_id
       #   end
       #
@@ -126,7 +132,7 @@ module ActiveEntity
       # teacher can only be on the schedule once per semester for a particular
       # class.
       #
-      #   class TeacherSchedule < ActiveRecord::Base
+      #   class TeacherSchedule < ActiveEntity::Base
       #     validates_uniqueness_of :teacher_id, scope: [:semester_id, :class_id]
       #   end
       #
@@ -135,7 +141,7 @@ module ActiveEntity
       # are not being taken into consideration when validating uniqueness
       # of the title attribute:
       #
-      #   class Article < ActiveRecord::Base
+      #   class Article < ActiveEntity::Base
       #     validates_uniqueness_of :title, conditions: -> { where.not(status: 'archived') }
       #   end
       #
@@ -172,7 +178,7 @@ module ActiveEntity
       # === Concurrency and integrity
       #
       # Using this validation method in conjunction with
-      # {ActiveRecord::Base#save}[rdoc-ref:Persistence#save]
+      # {ActiveEntity::Base#save}[rdoc-ref:Persistence#save]
       # does not guarantee the absence of duplicate record insertions, because
       # uniqueness checks on the application level are inherently prone to race
       # conditions. For example, suppose that two users try to post a Comment at
@@ -212,7 +218,7 @@ module ActiveEntity
       # the field's uniqueness.
       #
       # When the database catches such a duplicate insertion,
-      # {ActiveRecord::Base#save}[rdoc-ref:Persistence#save] will raise an ActiveRecord::StatementInvalid
+      # {ActiveEntity::Base#save}[rdoc-ref:Persistence#save] will raise an ActiveEntity::StatementInvalid
       # exception. You can either choose to let this error propagate (which
       # will result in the default Rails exception page being shown), or you
       # can catch it and restart the transaction (e.g. by telling the user
@@ -220,17 +226,17 @@ module ActiveEntity
       # This technique is also known as
       # {optimistic concurrency control}[https://en.wikipedia.org/wiki/Optimistic_concurrency_control].
       #
-      # The bundled ActiveRecord::ConnectionAdapters distinguish unique index
+      # The bundled ActiveEntity::ConnectionAdapters distinguish unique index
       # constraint errors from other types of database errors by throwing an
-      # ActiveRecord::RecordNotUnique exception. For other adapters you will
+      # ActiveEntity::RecordNotUnique exception. For other adapters you will
       # have to parse the (database-specific) exception message to detect such
       # a case.
       #
-      # The following bundled adapters throw the ActiveRecord::RecordNotUnique exception:
+      # The following bundled adapters throw the ActiveEntity::RecordNotUnique exception:
       #
-      # * ActiveRecord::ConnectionAdapters::Mysql2Adapter.
-      # * ActiveRecord::ConnectionAdapters::SQLite3Adapter.
-      # * ActiveRecord::ConnectionAdapters::PostgreSQLAdapter.
+      # * ActiveEntity::ConnectionAdapters::Mysql2Adapter.
+      # * ActiveEntity::ConnectionAdapters::SQLite3Adapter.
+      # * ActiveEntity::ConnectionAdapters::PostgreSQLAdapter.
       def validates_uniqueness_on_active_record_of(*attr_names)
         validates_with UniquenessOnActiveRecordValidator, _merge_attributes(attr_names)
       end

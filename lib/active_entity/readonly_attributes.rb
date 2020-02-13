@@ -16,7 +16,7 @@ module ActiveEntity
       @_attr_readonly_enabled = true
     end
 
-    def enable_attr_readonly
+    def without_attr_readonly
       return unless block_given?
 
       disable_attr_readonly!
@@ -31,6 +31,10 @@ module ActiveEntity
     end
     alias attr_readonly_enabled? _attr_readonly_enabled
 
+    def readonly_attribute?(name)
+      self.class.readonly_attribute?(name)
+    end
+
     module ClassMethods
       # Attributes listed as readonly will be used to create a new record but update operations will
       # ignore these fields.
@@ -41,6 +45,10 @@ module ActiveEntity
       # Returns an array of all the attributes that have been specified as readonly.
       def readonly_attributes
         _attr_readonly
+      end
+
+      def readonly_attribute?(name) # :nodoc:
+        _attr_readonly.include?(name)
       end
     end
   end

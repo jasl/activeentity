@@ -23,7 +23,7 @@ module ActiveEntity
     # \Validations with no <tt>:on</tt> option will run no matter the context. \Validations with
     # some <tt>:on</tt> option will only run in the specified context.
     def valid?(context = nil)
-      context ||= default_validation_context
+      context ||= :default
       output = super(context)
       errors.empty? && output
     end
@@ -31,10 +31,6 @@ module ActiveEntity
     alias_method :validate, :valid?
 
   private
-
-    def default_validation_context
-      :default
-    end
 
     def perform_validations(options = {})
       options[:validate] == false || valid?(options[:context])
@@ -47,5 +43,5 @@ require "active_entity/validations/presence"
 require "active_entity/validations/absence"
 require "active_entity/validations/length"
 require "active_entity/validations/subset"
-require "active_entity/validations/uniqueness_in_embedding"
+require "active_entity/validations/uniqueness_in_embeds"
 require "active_entity/validations/uniqueness_on_active_record"

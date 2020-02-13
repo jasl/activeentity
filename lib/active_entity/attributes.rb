@@ -12,7 +12,13 @@ module ActiveEntity
     end
 
     module ClassMethods
-      # Defines an attribute with a type on this model.
+      # Defines an attribute with a type on this model. It will override the
+      # type of existing attributes if needed. This allows control over how
+      # values are converted to and from SQL when assigned to a model. It also
+      # changes the behavior of values passed to
+      # {ActiveEntity::Base.where}[rdoc-ref:QueryMethods#where]. This will let you use
+      # your domain objects across much of Active Entity, without having to
+      # rely on implementation details or monkey patching.
       #
       # +name+ The name of the methods to define attribute methods for, and the
       # column which this will persist to.
@@ -29,10 +35,65 @@ module ActiveEntity
       # is not passed, the previous default value (if any) will be used.
       # Otherwise, the default will be +nil+.
       #
-      # +array+ Specifies that the type should be an array (see the
+      # +array+ (PostgreSQL only) specifies that the type should be an array (see the
       # examples below).
       #
+      # +range+ (PostgreSQL only) specifies that the type should be a range (see the
+      # examples below).
+      #
+      # When using a symbol for +cast_type+, extra options are forwarded to the
+      # constructor of the type object.
+      #
       # ==== Examples
+      #
+      # The type detected by Active Entity can be overridden.
+      #
+      #   # db/schema.rb
+      #   create_table :store_listings, force: true do |t|
+      #     t.decimal :price_in_cents
+      #   end
+      #
+      #   # app/models/store_listing.rb
+      #   class StoreListing < ActiveEntity::Base
+      #   end
+      #
+      #   store_listing = StoreListing.new(price_in_cents: '10.1')
+      #
+      #   # before
+      #   store_listing.price_in_cents # => BigDecimal(10.1)
+      #
+      #   class StoreListing < ActiveEntity::Base
+      #     attribute :price_in_cents, :integer
+      #   end
+      #
+      #   # after
+      #   store_listing.price_in_cents # => 10
+      #
+      # A default can also be provided.
+      #
+      #   # db/schema.rb
+      #   create_table :store_listings, force: true do |t|
+      #     t.string :my_string, default: "original default"
+      #   end
+      #
+      #   StoreListing.new.my_string # => "original default"
+      #
+      #   # app/models/store_listing.rb
+      #   class StoreListing < ActiveEntity::Base
+      #     attribute :my_string, :string, default: "new default"
+      #   end
+      #
+      #   StoreListing.new.my_string # => "new default"
+      #
+      #   class Product < ActiveEntity::Base
+      #     attribute :my_default_proc, :datetime, default: -> { Time.now }
+      #   end
+      #
+      #   Product.new.my_default_proc # => 2015-05-30 11:04:48 -0600
+      #   sleep 1
+      #   Product.new.my_default_proc # => 2015-05-30 11:04:49 -0600
+      #
+      # \Attributes do not need to be backed by a database column.
       #
       #   # app/models/my_model.rb
       #   class MyModel < ActiveEntity::Base
@@ -53,6 +114,16 @@ module ActiveEntity
       #       my_int_array: [1, 2, 3],
       #       my_float_range: 1.0..3.5
       #     }
+      #
+      # Passing options to the type constructor
+      #
+      #   # app/models/my_model.rb
+      #   class MyModel < ActiveEntity::Base
+      #     attribute :small_int, :integer, limit: 2
+      #   end
+      #
+      #   MyModel.create(small_int: 65537)
+      #   # => Error: 65537 is out of range for the limit of two bytes
       #
       # ==== Creating Custom Types
       #
@@ -121,6 +192,8 @@ module ActiveEntity
       # is not passed, the previous default value (if any) will be used.
       # Otherwise, the default will be +nil+. A proc can also be passed, and
       # will be called once each time a new value is needed.
+      #
+      # +cast+ or +deserialize+.
       def define_attribute(
         name,
         cast_type,
@@ -158,6 +231,7 @@ module ActiveEntity
                 _default_attributes.fetch(name.to_s) { nil },
                 )
             end
+
           _default_attributes[name] = default_attribute
         end
     end

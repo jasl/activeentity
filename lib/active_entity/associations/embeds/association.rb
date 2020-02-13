@@ -4,7 +4,7 @@ require "active_support/core_ext/array/wrap"
 
 module ActiveEntity
   module Associations
-    module Embedded
+    module Embeds
       # = Active Entity Associations
       #
       # This is the root class of all associations ('+ Foo' signifies an included module Foo):
@@ -83,7 +83,7 @@ module ActiveEntity
         end
 
         def initialize_attributes(record, attributes = {}) #:nodoc:
-          record.send(:_assign_attributes, attributes) if attributes.any?
+          record.assign_attributes attributes if attributes.any?
           set_inverse_instance(record)
         end
 

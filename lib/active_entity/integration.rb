@@ -30,7 +30,7 @@ module ActiveEntity
     #   user_path(user)  # => "/users/Phusion"
     def to_param
       # We can't use alias_method here, because method 'id' optimizes itself on the fly.
-      id && id.to_s # Be sure to stringify the id for routes
+      id&.to_s # Be sure to stringify the id for routes
     end
 
     module ClassMethods

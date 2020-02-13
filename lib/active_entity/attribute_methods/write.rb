@@ -31,9 +31,7 @@ module ActiveEntity
       # turned into +nil+.
       def write_attribute(attr_name, value)
         name = attr_name.to_s
-        if self.class.attribute_alias?(name)
-          name = self.class.attribute_alias(name)
-        end
+        name = self.class.attribute_aliases[name] || name
 
         _write_attribute(name, value)
       end
@@ -50,12 +48,11 @@ module ActiveEntity
       private
 
         def write_attribute_without_type_cast(attr_name, value)
-          name = attr_name.to_s
-          @attributes.write_cast_value(name, value)
+          @attributes.write_cast_value(attr_name.to_s, value)
           value
         end
 
-        # Handle *= for method_missing.
+        # Dispatch target for <tt>*=</tt> attribute methods.
         def attribute=(attribute_name, value)
           _write_attribute(attribute_name, value)
         end

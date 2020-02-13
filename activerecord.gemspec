@@ -2,10 +2,8 @@
 
 $:.push File.expand_path("lib", __dir__)
 
-# Maintain your gem's version:
 require "active_entity/version"
 
-# Describe your gem and declare its dependencies:
 Gem::Specification.new do |s|
   s.platform    = Gem::Platform::RUBY
   s.name        = "activeentity"
@@ -17,11 +15,14 @@ Gem::Specification.new do |s|
   s.description = "Rails virtual model solution based on ActiveModel design for Rails 6+."
   s.license     = "MIT"
 
-  s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
-  s.require_path = "lib"
-
   s.required_ruby_version = ">= 2.5.0"
 
-  s.add_dependency "activesupport", ">= 6.0.0.rc1", "< 7.0"
-  s.add_dependency "activemodel",   ">= 6.0.0.rc1", "< 7.0"
+  s.files        = Dir["lib/**/*", "MIT-LICENSE", "Rakefile", "README.md"]
+  s.require_path = "lib"
+
+  # s.extra_rdoc_files = %w(README.rdoc)
+  # s.rdoc_options.concat %w[--main README.rdoc]
+
+  s.add_dependency "activesupport", "~> 6.0", "< 7.0"
+  s.add_dependency "activemodel", "~> 6.0", "< 7.0"
 end

@@ -2,7 +2,7 @@
 
 module ActiveEntity
   module Associations
-    module Embedded
+    module Embeds
       # Association proxies in Active Entity are middlemen between the object that
       # holds the association, known as the <tt>@owner</tt>, and the actual associated
       # object, known as the <tt>@target</tt>. The kind of association any proxy is
@@ -40,7 +40,7 @@ module ActiveEntity
                  :[], :&, :|, :+, :-, :sample, :reverse, :rotate, :compact, :in_groups, :in_groups_of,
                  :find, :last, :take, :blank?, :present?, :empty?, :any?, :one?, :many?, :include?,
                  :to_sentence, :to_formatted_s, :as_json,
-                 :shuffle, :split, :slice, :index, :rindex, to: :records
+                 :shuffle, :split, :slice, :index, :rindex, :size, to: :records
 
         def initialize(klass, association)
           @klass = klass

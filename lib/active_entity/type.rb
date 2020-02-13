@@ -6,7 +6,6 @@ require "active_entity/type/internal/timezone"
 
 require "active_entity/type/date"
 require "active_entity/type/date_time"
-require "active_entity/type/decimal_without_scale"
 require "active_entity/type/json"
 require "active_entity/type/time"
 require "active_entity/type/text"
@@ -18,12 +17,9 @@ require "active_entity/type/modifiers/array_without_blank"
 require "active_entity/type/serialized"
 require "active_entity/type/registry"
 
-require "active_entity/type/type_map"
-require "active_entity/type/hash_lookup_type_map"
-
 module ActiveEntity
   module Type
-    @registry = ActiveEntity::Type::Registry.new
+    @registry = Registry.new
 
     class << self
       attr_accessor :registry # :nodoc:
@@ -31,8 +27,12 @@ module ActiveEntity
 
       # Add a new type to the registry, allowing it to be referenced as a
       # symbol by {ActiveEntity::Base.attribute}[rdoc-ref:Attributes::ClassMethods#attribute].
-      # <tt>override: true</tt> will cause your type to be used instead of the native type.
-      # <tt>override: false</tt> will cause the native type to be used over yours if one exists.
+      # If your type is only meant to be used with a specific database adapter, you can
+      # do so by passing <tt>adapter: :postgresql</tt>. If your type has the same
+      # name as a native type for the current adapter, an exception will be
+      # raised unless you specify an +:override+ option. <tt>override: true</tt> will
+      # cause your type to be used instead of the native type. <tt>override:
+      # false</tt> will cause the native type to be used over yours if one exists.
       def register(type_name, klass = nil, **options, &block)
         registry.register(type_name, klass, **options, &block)
       end
@@ -46,7 +46,6 @@ module ActiveEntity
       end
     end
 
-    Helpers = ActiveModel::Type::Helpers
     BigInteger = ActiveModel::Type::BigInteger
     Binary = ActiveModel::Type::Binary
     Boolean = ActiveModel::Type::Boolean
@@ -67,6 +66,7 @@ module ActiveEntity
     register(:decimal, Type::Decimal, override: false)
     register(:float, Type::Float, override: false)
     register(:integer, Type::Integer, override: false)
+    register(:unsigned_integer, Type::UnsignedInteger, override: false)
     register(:json, Type::Json, override: false)
     register(:string, Type::String, override: false)
     register(:text, Type::Text, override: false)

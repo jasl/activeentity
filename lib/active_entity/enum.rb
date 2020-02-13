@@ -27,6 +27,32 @@ module ActiveEntity
   #   conversation.status.nil? # => true
   #   conversation.status      # => nil
   #
+  # Scopes based on the allowed values of the enum field will be provided
+  # as well. With the above example:
+  #
+  #   Conversation.active
+  #   Conversation.not_active
+  #   Conversation.archived
+  #   Conversation.not_archived
+  #
+  # Of course, you can also query them directly if the scopes don't fit your
+  # needs:
+  #
+  #   Conversation.where(status: [:active, :archived])
+  #   Conversation.where.not(status: :active)
+  #
+  # Defining scopes can be disabled by setting +:_scopes+ to +false+.
+  #
+  #   class Conversation < ActiveEntity::Base
+  #     enum status: [ :active, :archived ], _scopes: false
+  #   end
+  #
+  # You can set the default value from the database declaration, like:
+  #
+  #   create_table :conversations do |t|
+  #     t.column :status, :integer, default: 0
+  #   end
+  #
   # Good practice is to let the first declared status be the default.
   #
   # Finally, it's also possible to explicitly map the relation between attribute and
@@ -97,12 +123,12 @@ module ActiveEntity
       end
 
       def cast(value)
-        return if value.blank?
-
         if mapping.has_key?(value)
           value.to_s
         elsif mapping.has_value?(value)
           mapping.key(value)
+        elsif value.blank?
+          nil
         else
           assert_valid_value(value)
         end
@@ -214,8 +240,6 @@ module ActiveEntity
       def detect_enum_conflict!(enum_name, method_name, klass_method = false)
         if klass_method && dangerous_class_method?(method_name)
           raise_conflict_error(enum_name, method_name, type: "class")
-        # elsif klass_method && method_defined_within?(method_name, Relation)
-        #   raise_conflict_error(enum_name, method_name, type: "class", source: Relation.name)
         elsif !klass_method && dangerous_attribute_method?(method_name)
           raise_conflict_error(enum_name, method_name)
         elsif !klass_method && method_defined_within?(method_name, _enum_methods_module, Module)

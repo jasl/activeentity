@@ -6,8 +6,8 @@ module ActiveEntity
   # :stopdoc:
   module Type
     class Registry < ActiveModel::Type::Registry
-      def add_modifier(options, klass)
-        registrations << DecorationRegistration.new(options, klass)
+      def add_modifier(options, klass, **args)
+        registrations << DecorationRegistration.new(options, klass, **args)
       end
 
       private
@@ -16,9 +16,9 @@ module ActiveEntity
           Registration
         end
 
-        def find_registration(symbol, *args)
+        def find_registration(symbol, *args, **kwargs)
           registrations
-            .select { |registration| registration.matches?(symbol, *args) }
+            .select { |registration| registration.matches?(symbol, *args, **kwargs) }
             .max
         end
     end
@@ -56,7 +56,7 @@ module ActiveEntity
     end
 
     class DecorationRegistration < Registration
-      def initialize(options, klass)
+      def initialize(options, klass, **)
         @options = options
         @klass = klass
       end

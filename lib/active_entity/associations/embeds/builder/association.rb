@@ -11,7 +11,7 @@
 #    - CollectionAssociation
 #      - HasManyAssociation
 
-module ActiveEntity::Associations::Embedded::Builder # :nodoc:
+module ActiveEntity::Associations::Embeds::Builder # :nodoc:
   class Association #:nodoc:
     class << self
       attr_accessor :extensions

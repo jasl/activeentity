@@ -2,7 +2,7 @@
 
 module ActiveEntity
   module Associations
-    module Embedded
+    module Embeds
       # = Active Entity Association Collection
       #
       # CollectionAssociation is an abstract class that provides common stuff to

@@ -17,7 +17,7 @@ module ActiveEntity
       def create(macro, name, scope, options, ar_or_ae)
         reflection_class_for(macro).new(name, scope, options, ar_or_ae)
 
-        # TODO: Support bridge to Active Record
+        # TODO: Support bridge to Active Entity
         # reflection = reflection_class_for(macro).new(name, scope, options, ar_or_ae)
         # options[:through] ? ActiveRecord::ThroughReflection.new(reflection) : reflection
       end
@@ -78,21 +78,21 @@ module ActiveEntity
       #
       def reflections
         @__reflections ||= begin
-          ref = {}
+                             ref = {}
 
-          _reflections.each do |name, reflection|
-            parent_reflection = reflection.parent_reflection
+                             _reflections.each do |name, reflection|
+                               parent_reflection = reflection.parent_reflection
 
-            if parent_reflection
-              parent_name = parent_reflection.name
-              ref[parent_name.to_s] = parent_reflection
-            else
-              ref[name] = reflection
-            end
-          end
+                               if parent_reflection
+                                 parent_name = parent_reflection.name
+                                 ref[parent_name.to_s] = parent_reflection
+                               else
+                                 ref[name] = reflection
+                               end
+                             end
 
-          ref
-        end
+                             ref
+                           end
       end
 
       # Returns an array of AssociationReflection objects for all the
@@ -244,9 +244,9 @@ module ActiveEntity
       def ==(other_aggregation)
         super ||
           other_aggregation.kind_of?(self.class) &&
-          name == other_aggregation.name &&
-          !other_aggregation.options.nil? &&
-          active_entity == other_aggregation.active_entity
+            name == other_aggregation.name &&
+            !other_aggregation.options.nil? &&
+            active_entity == other_aggregation.active_entity
       end
 
       private
@@ -420,7 +420,7 @@ module ActiveEntity
       def collection?; true; end
 
       def association_class
-        Associations::Embedded::EmbedsManyAssociation
+        Associations::Embeds::EmbedsManyAssociation
       end
     end
 
@@ -430,7 +430,7 @@ module ActiveEntity
       def embeds_one?; true; end
 
       def association_class
-        Associations::Embedded::EmbedsOneAssociation
+        Associations::Embeds::EmbedsOneAssociation
       end
     end
 
@@ -440,7 +440,7 @@ module ActiveEntity
       def embedded_in?; true; end
 
       def association_class
-        Associations::Embedded::EmbeddedInAssociation
+        Associations::Embeds::EmbeddedInAssociation
       end
     end
   end

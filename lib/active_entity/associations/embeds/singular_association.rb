@@ -2,7 +2,7 @@
 
 module ActiveEntity
   module Associations
-    module Embedded
+    module Embeds
       class SingularAssociation < Association #:nodoc:
         # Implements the reader method, e.g. foo.bar for Foo.has_one :bar
         def reader

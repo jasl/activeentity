@@ -2,7 +2,7 @@
 
 # This class is inherited by the has_one and belongs_to association classes
 
-module ActiveEntity::Associations::Embedded::Builder # :nodoc:
+module ActiveEntity::Associations::Embeds::Builder # :nodoc:
   class SingularAssociation < Association #:nodoc:
     def self.valid_options(options)
       super + [:inverse_of, :required]

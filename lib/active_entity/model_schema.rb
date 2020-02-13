@@ -9,22 +9,10 @@ module ActiveEntity
     included do
       delegate :type_for_attribute, to: :class
 
-      self.inheritance_attribute = "type"
-
       initialize_load_schema_monitor
     end
 
     module ClassMethods
-      def inheritance_attribute
-        (@inheritance_attribute ||= nil) || superclass.inheritance_attribute
-      end
-
-      # Sets the value of inheritance_attribute
-      def inheritance_attribute=(value)
-        @inheritance_attribute = value.to_s
-        @explicit_inheritance_attribute = true
-      end
-
       def attributes_builder # :nodoc:
         unless defined?(@attributes_builder) && @attributes_builder
           defaults = _default_attributes

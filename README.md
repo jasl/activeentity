@@ -89,15 +89,15 @@ end
 
 class Reviewer < ActiveEntity::Base
   attribute :first_name, :string
-  attribute :last_name, :string 
+  attribute :last_name, :string
 end
 
 class Book < ActiveEntity::Base
   embeds_many :categories
-  validates :categories, uniqueness_in_embedding: {key: :name}
-  
+  validates :categories, uniqueness_in_embeds: {key: :name}
+
   embeds_many :reviewers
-  validates :categories, uniqueness_in_embedding: {key: [:first_name, :last_name]}
+  validates :categories, uniqueness_in_embeds: {key: [:first_name, :last_name]}
 end
 ```
 

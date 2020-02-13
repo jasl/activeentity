@@ -2,7 +2,7 @@
 
 module ActiveEntity
   module Associations
-    module Embedded
+    module Embeds
       # = Active Entity Has One Association
       class EmbedsOneAssociation < SingularAssociation #:nodoc:
         private

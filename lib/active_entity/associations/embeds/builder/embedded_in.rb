@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ActiveEntity::Associations::Embedded::Builder # :nodoc:
+module ActiveEntity::Associations::Embeds::Builder # :nodoc:
   class EmbeddedIn < SingularAssociation #:nodoc:
     def self.macro
       :embedded_in

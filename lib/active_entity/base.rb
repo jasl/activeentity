@@ -1,22 +1,12 @@
 # frozen_string_literal: true
 
-require "yaml"
 require "active_support/benchmarkable"
 require "active_support/dependencies"
 require "active_support/descendants_tracker"
 require "active_support/time"
-require "active_support/core_ext/module/attribute_accessors"
-require "active_support/core_ext/array/extract_options"
-require "active_support/core_ext/hash/deep_merge"
-require "active_support/core_ext/hash/slice"
-require "active_support/core_ext/string/behavior"
-require "active_support/core_ext/kernel/singleton_class"
-require "active_support/core_ext/module/introspection"
-require "active_support/core_ext/object/duplicable"
 require "active_support/core_ext/class/subclasses"
 require "active_entity/attribute_decorators"
 require "active_entity/define_callbacks"
-require "active_entity/errors"
 require "active_entity/attributes"
 
 module ActiveEntity #:nodoc:
@@ -28,7 +18,7 @@ module ActiveEntity #:nodoc:
   # Active Entity objects. The mapping that binds a given Active Entity class to a certain
   # database table will happen automatically in most common cases, but can be overwritten for the uncommon ones.
   #
-  # See the mapping rules in table_name and the full example in link:files/activerecord/README_rdoc.html for more insight.
+  # See the mapping rules in table_name and the full example in link:files/activeentity/README_rdoc.html for more insight.
   #
   # == Creation
   #
@@ -292,8 +282,9 @@ module ActiveEntity #:nodoc:
     include AttributeDecorators
     include DefineCallbacks
     include AttributeMethods
+    include Callbacks
     include Associations
-    include ValidateEmbeddedAssociation
+    include ValidateEmbedsAssociation
     include NestedAttributes
     include Reflection
     include Serialization

@@ -27,9 +27,7 @@ module ActiveEntity
       # to a date object, like Date.new(2004, 12, 12)).
       def read_attribute(attr_name, &block)
         name = attr_name.to_s
-        if self.class.attribute_alias?(name)
-          name = self.class.attribute_alias(name)
-        end
+        name = self.class.attribute_aliases[name] || name
 
         _read_attribute(name, &block)
       end

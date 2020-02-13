@@ -2,7 +2,7 @@
 
 require "active_entity/associations"
 
-module ActiveEntity::Associations::Embedded::Builder # :nodoc:
+module ActiveEntity::Associations::Embeds::Builder # :nodoc:
   class CollectionAssociation < Association #:nodoc:
     CALLBACKS = [:before_add, :after_add, :before_remove, :after_remove]
 

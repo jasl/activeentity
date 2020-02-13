@@ -2,7 +2,7 @@
 
 module ActiveEntity
   module Validations
-    class UniquenessInEmbeddingValidator < ActiveModel::EachValidator # :nodoc:
+    class UniquenessInEmbedsValidator < ActiveModel::EachValidator # :nodoc:
       ERROR_MESSAGE = "`key` option of the configuration hash must be symbol or array of symbols."
 
       def check_validity!

@@ -2,7 +2,7 @@
 
 module ActiveEntity
   module Associations
-    module Embedded
+    module Embeds
       # = Active Entity Has Many Association
       # This is the proxy that handles a has many association.
       #
