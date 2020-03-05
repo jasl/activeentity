@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "mutex_m"
+require "active_support/core_ext/enumerable"
 
 module ActiveEntity
   # = Active Entity Attribute Methods
@@ -268,50 +269,11 @@ module ActiveEntity
       write_attribute(attr_name, value)
     end
 
-    # Returns the name of all database fields which have been read from this
-    # model. This can be useful in development mode to determine which fields
-    # need to be selected. For performance critical pages, selecting only the
-    # required fields can be an easy performance win (assuming you aren't using
-    # all of the fields on the model).
-    #
-    # For example:
-    #
-    #   class PostsController < ActionController::Base
-    #     after_action :print_accessed_fields, only: :index
-    #
-    #     def index
-    #       @posts = Post.all
-    #     end
-    #
-    #     private
-    #
-    #     def print_accessed_fields
-    #       p @posts.first.accessed_fields
-    #     end
-    #   end
-    #
-    # Which allows you to quickly change your code to:
-    #
-    #   class PostsController < ActionController::Base
-    #     def index
-    #       @posts = Post.select(:id, :title, :author_id, :updated_at)
-    #     end
-    #   end
-    def accessed_fields
-      @attributes.accessed
-    end
-
     private
 
       def attribute_method?(attr_name)
         # We check defined? because Syck calls respond_to? before actually calling initialize.
         defined?(@attributes) && @attributes.key?(attr_name)
-      end
-
-      def attributes_with_values(attribute_names)
-        attribute_names.each_with_object({}) do |name, attrs|
-          attrs[name] = _read_attribute(name)
-        end
       end
 
       def format_for_inspect(value)
