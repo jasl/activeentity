@@ -27,7 +27,7 @@ module ActiveEntity
           raise ArgumentError, "Must provide one of option :class_name or :class."
         end
         unless @klass < ActiveRecord::Base
-          raise ArgumentError, "Class must be an Active Entity model, but got #{@finder_class}."
+          raise ArgumentError, "Class must be an Active Entity model, but got #{@klass}."
         end
         if @klass.abstract_class?
           raise ArgumentError, "Class can't be an abstract class."
@@ -39,13 +39,6 @@ module ActiveEntity
         value = map_enum_attribute(finder_class, attribute, value)
 
         relation = build_relation(finder_class, attribute, value)
-        if record.persisted?
-          if finder_class.primary_key
-            relation = relation.where.not(finder_class.primary_key => record.id_in_database)
-          else
-            raise UnknownPrimaryKey.new(finder_class, "Cannot validate uniqueness for persisted record without primary key.")
-          end
-        end
         relation = scope_relation(record, relation)
         relation = relation.merge(options[:conditions]) if options[:conditions]
 
@@ -94,11 +87,7 @@ module ActiveEntity
 
       def scope_relation(record, relation)
         Array(options[:scope]).each do |scope_item|
-          scope_value = if record.class._reflect_on_association(scope_item)
-            record.association(scope_item).reader
-          else
-            record._read_attribute(scope_item)
-          end
+          scope_value = record._read_attribute(scope_item)
           relation = relation.where(scope_item => scope_value)
         end
 

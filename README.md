@@ -65,7 +65,7 @@ Supported Active Record validations:
 
 #### `subset` validation
 
-Because Active Entity supports array attribute, for some reason, we may want to test values of an array attribute are all included in a given set.
+Because Active Entity supports array attribute, for some reason, you may want to test values of an array attribute are all included in a given set.
 
 Active Entity provides `subset` validation to achieve that, it usage similar to `inclusion` or `exclusion`
 
@@ -76,9 +76,9 @@ class Steak < ActiveEntity::Base
 end
 ```
 
-#### `uniqueness_in_embedding` validation
+#### `uniqueness_in_embeds` validation
 
-Active Entity provides `uniqueness_in_embedding` validation to test duplicate nesting virtual record.
+Active Entity provides `uniqueness_in_embeds` validation to test duplicate nesting virtual record.
 
 Argument `key` is attribute name of nested model, it also supports multiple attributes by given an array.
 
@@ -98,6 +98,23 @@ class Book < ActiveEntity::Base
 
   embeds_many :reviewers
   validates :categories, uniqueness_in_embeds: {key: [:first_name, :last_name]}
+end
+```
+
+#### `uniqueness_in_active_record` validation
+
+Active Entity provides `uniqueness_in_active_record` validation to test given `scope` doesn't present in ActiveRecord model.
+
+The usage same as [uniqueness](https://guides.rubyonrails.org/active_record_validations.html#uniqueness) in addition you must give a AR model `class_name`
+
+```ruby
+class Candidate < ActiveEntity::Base
+  attribute :name, :string
+
+  validates :name,
+            uniqueness_on_active_record: {
+              class_name: "Staff"
+            }
 end
 ```
 
