@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ActiveEntity
+module ActiveRecord
   module AttributeMethods
     module Write
       extend ActiveSupport::Concern
@@ -11,12 +11,12 @@ module ActiveEntity
 
       module ClassMethods # :nodoc:
         private
-
           def define_method_attribute=(name)
             ActiveModel::AttributeMethods::AttrNames.define_attribute_accessor_method(
               generated_attribute_methods, name, writer: true,
-            ) do |temp_method_name, attr_name_expr|
+              ) do |temp_method_name, attr_name_expr|
               generated_attribute_methods.module_eval <<-RUBY, __FILE__, __LINE__ + 1
+                # frozen_string_literal: true
                 def #{temp_method_name}(value)
                   name = #{attr_name_expr}
                   _write_attribute(name, value)
@@ -39,8 +39,6 @@ module ActiveEntity
       # This method exists to avoid the expensive primary_key check internally, without
       # breaking compatibility with the write_attribute API
       def _write_attribute(attr_name, value) # :nodoc:
-        return if readonly_attribute?(attr_name) && attr_readonly_enabled?
-
         @attributes.write_from_user(attr_name.to_s, value)
         value
       end

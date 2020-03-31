@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-module ActiveEntity
+module ActiveRecord
   module AttributeMethods
     module Read
       extend ActiveSupport::Concern
 
       module ClassMethods # :nodoc:
         private
-
           def define_method_attribute(name)
             ActiveModel::AttributeMethods::AttrNames.define_attribute_accessor_method(
               generated_attribute_methods, name
             ) do |temp_method_name, attr_name_expr|
               generated_attribute_methods.module_eval <<-RUBY, __FILE__, __LINE__ + 1
+                # frozen_string_literal: true
                 def #{temp_method_name}
                   name = #{attr_name_expr}
                   _read_attribute(name) { |n| missing_attribute(n, caller) }
