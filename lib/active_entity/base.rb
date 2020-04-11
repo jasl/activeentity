@@ -280,7 +280,6 @@ module ActiveEntity #:nodoc:
     include Validations
     include Attributes
     include AttributeDecorators
-    include DefineCallbacks
     include AttributeMethods
     include Callbacks
     include Associations
