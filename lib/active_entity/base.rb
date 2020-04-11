@@ -6,7 +6,6 @@ require "active_support/descendants_tracker"
 require "active_support/time"
 require "active_support/core_ext/class/subclasses"
 require "active_entity/attribute_decorators"
-require "active_entity/define_callbacks"
 require "active_entity/attributes"
 
 module ActiveEntity #:nodoc:

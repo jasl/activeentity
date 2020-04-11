@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ActiveRecord
+module ActiveEntity
   module AttributeMethods
     module Read
       extend ActiveSupport::Concern
