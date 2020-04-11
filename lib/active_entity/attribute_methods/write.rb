@@ -11,6 +11,7 @@ module ActiveRecord
 
       module ClassMethods # :nodoc:
         private
+
           def define_method_attribute=(name)
             ActiveModel::AttributeMethods::AttrNames.define_attribute_accessor_method(
               generated_attribute_methods, name, writer: true,
