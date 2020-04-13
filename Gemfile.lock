@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    activeentity (0.0.1.beta16)
+    activeentity (0.0.1.beta17)
       activemodel (~> 6.0, < 7.0)
       activesupport (~> 6.0, < 7.0)
 
