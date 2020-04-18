@@ -38,6 +38,7 @@ module ActiveEntity
   extend ActiveSupport::Autoload
 
   autoload :Base
+  autoload :Callbacks
   autoload :Core
   autoload :Enum
   autoload :Inheritance
