@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    activeentity (0.0.1.beta17)
+    activeentity (0.0.1.beta18)
       activemodel (~> 6.0, < 7.0)
       activesupport (~> 6.0, < 7.0)
 
@@ -66,7 +66,7 @@ GEM
     ast (2.4.0)
     bindex (0.8.1)
     builder (3.2.4)
-    byebug (11.1.1)
+    byebug (11.1.2)
     concurrent-ruby (1.1.6)
     crass (1.0.6)
     erubi (1.9.0)
@@ -91,7 +91,7 @@ GEM
     nokogiri (1.10.9)
       mini_portile2 (~> 2.4.0)
     parallel (1.19.1)
-    parser (2.7.1.0)
+    parser (2.7.1.1)
       ast (~> 2.4.0)
     puma (4.3.3)
       nio4r (~> 2.0)
@@ -127,7 +127,7 @@ GEM
     rainbow (3.0.0)
     rake (13.0.1)
     rexml (3.2.4)
-    rubocop (0.81.0)
+    rubocop (0.82.0)
       jaro_winkler (~> 1.5.1)
       parallel (~> 1.10)
       parser (>= 2.7.0.1)
