@@ -13,9 +13,8 @@ AllCops:
     - 'node_modules/**/*'
     - 'test/dummy/db/schema.rb'
 
-Performance:
-  Exclude:
-    - 'test/**/*'
+#Metrics/AbcSize:
+#  Max: 30
 
 # Prefer assert_not over assert !
 Rails/AssertNot:
@@ -27,23 +26,21 @@ Rails/RefuteMethods:
   Include:
     - 'test/**/*'
 
+Rails/IndexBy:
+  Enabled: true
+
+Rails/IndexWith:
+  Enabled: true
+
 # Prefer &&/|| over and/or.
 Style/AndOr:
   Enabled: true
 
-# Do not use braces for hash literals when they are the last argument of a
-# method call.
-Style/ClassAndModuleChildren:
-  Enabled: false
-
-Naming/AccessorMethodName:
-  Enabled: false
-
-Naming/MemoizedInstanceVariableName:
-  Enabled: false
-
 # Align `when` with `case`.
 Layout/CaseIndentation:
+  Enabled: true
+
+Layout/ClosingHeredocIndentation:
   Enabled: true
 
 # Align comments with method definitions.
@@ -85,17 +82,6 @@ Layout/EmptyLinesAroundModuleBody:
 Style/HashSyntax:
   Enabled: true
 
-# Do not use braces for hash literals when they are the last argument of a
-# method call.
-Style/HashEachMethods:
-  Enabled: true
-
-Style/HashTransformKeys:
-  Enabled: true
-
-Style/HashTransformValues:
-  Enabled: true
-
 Layout/FirstArgumentIndentation:
   Enabled: true
 
@@ -127,9 +113,6 @@ Layout/SpaceAroundEqualsInParameterDefault:
 Layout/SpaceAroundKeyword:
   Enabled: true
 
-Layout/SpaceAroundOperators:
-  Enabled: true
-
 Layout/SpaceBeforeComma:
   Enabled: true
 
@@ -149,8 +132,6 @@ Style/MethodDefParentheses:
 Style/FrozenStringLiteralComment:
   Enabled: true
   EnforcedStyle: always
-  Exclude:
-    - 'db/migrate/**/*.rb'
 
 Style/RedundantFreeze:
   Enabled: true
@@ -180,7 +161,7 @@ Style/StringLiterals:
 Layout/IndentationStyle:
   Enabled: true
 
-# Blank lines should not have any spaces.
+# Empty lines should not have any spaces.
 Layout/TrailingEmptyLines:
   Enabled: true
 
@@ -220,7 +201,16 @@ Lint/UselessAssignment:
 Lint/DeprecatedClassMethods:
   Enabled: true
 
+Lint/DeprecatedOpenSSLConstant:
+  Enabled: true
+
 Style/ParenthesesAroundCondition:
+  Enabled: true
+
+Style/HashTransformKeys:
+  Enabled: true
+
+Style/HashTransformValues:
   Enabled: true
 
 Style/RedundantBegin:
@@ -239,6 +229,12 @@ Style/ColonMethodCall:
   Enabled: true
 
 Style/TrivialAccessors:
+  Enabled: true
+
+Style/SlicingWithRange:
+  Enabled: true
+
+Style/RedundantRegexpEscape:
   Enabled: true
 
 Performance/FlatMap:
@@ -260,4 +256,10 @@ Performance/ReverseEach:
   Enabled: true
 
 Performance/UnfreezeString:
+  Enabled: true
+
+Performance/DeletePrefix:
+  Enabled: true
+
+Performance/DeleteSuffix:
   Enabled: true
