@@ -12,11 +12,12 @@ module ActiveEntity
       module ClassMethods # :nodoc:
         private
 
-          def define_method_attribute=(name)
+          def define_method_attribute=(name, owner: nil)
+            owner ||= generated_attribute_methods
             ActiveModel::AttributeMethods::AttrNames.define_attribute_accessor_method(
-              generated_attribute_methods, name, writer: true,
+              owner, name, writer: true,
               ) do |temp_method_name, attr_name_expr|
-              generated_attribute_methods.module_eval <<-RUBY, __FILE__, __LINE__ + 1
+              owner.module_eval <<-RUBY, __FILE__, __LINE__ + 1
                 # frozen_string_literal: true
                 def #{temp_method_name}(value)
                   name = #{attr_name_expr}
@@ -34,26 +35,23 @@ module ActiveEntity
         name = attr_name.to_s
         name = self.class.attribute_aliases[name] || name
 
-        _write_attribute(name, value)
+        name = @primary_key if name == "id" && @primary_key
+        @attributes.write_from_user(name, value)
       end
 
       # This method exists to avoid the expensive primary_key check internally, without
       # breaking compatibility with the write_attribute API
       def _write_attribute(attr_name, value) # :nodoc:
-        @attributes.write_from_user(attr_name.to_s, value)
-        value
+        @attributes.write_from_user(attr_name, value)
       end
+
+      alias :attribute= :_write_attribute
+      private :attribute=
 
       private
 
         def write_attribute_without_type_cast(attr_name, value)
-          @attributes.write_cast_value(attr_name.to_s, value)
-          value
-        end
-
-        # Dispatch target for <tt>*=</tt> attribute methods.
-        def attribute=(attribute_name, value)
-          _write_attribute(attribute_name, value)
+          @attributes.write_cast_value(attr_name, value)
         end
     end
   end

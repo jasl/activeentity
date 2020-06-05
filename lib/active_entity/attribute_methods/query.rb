@@ -31,12 +31,8 @@ module ActiveEntity
         end
       end
 
-      private
-
-        # Dispatch target for <tt>*?</tt> attribute methods.
-        def attribute?(attribute_name)
-          query_attribute(attribute_name)
-        end
+      alias :attribute? :query_attribute
+      private :attribute?
     end
   end
 end

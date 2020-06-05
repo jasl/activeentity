@@ -27,6 +27,17 @@ module ActiveEntity
       include Mutex_m
     end
 
+    class << self
+      def dangerous_attribute_methods # :nodoc:
+        @dangerous_attribute_methods ||= (
+        Base.instance_methods +
+          Base.private_instance_methods -
+          Base.superclass.instance_methods -
+          Base.superclass.private_instance_methods
+        ).map { |m| -m.to_s }.to_set.freeze
+      end
+    end
+
     module ClassMethods
       def inherited(child_class) #:nodoc:
         child_class.initialize_generated_modules
@@ -96,7 +107,7 @@ module ActiveEntity
       # A method name is 'dangerous' if it is already (re)defined by Active Entity, but
       # not by any ancestors. (So 'puts' is not dangerous but 'save' is.)
       def dangerous_attribute_method?(name) # :nodoc:
-        method_defined_within?(name, Base)
+        ::ActiveEntity::AttributeMethods.dangerous_attribute_methods.include?(name.to_s)
       end
 
       def method_defined_within?(name, klass, superklass = klass.superclass) # :nodoc:
@@ -148,25 +159,40 @@ module ActiveEntity
       #   class Person < ActiveEntity::Base
       #   end
       #
-      #   Person.has_attribute?('name')   # => true
-      #   Person.has_attribute?(:age)     # => true
-      #   Person.has_attribute?(:nothing) # => false
+      #   Person.has_attribute?('name')     # => true
+      #   Person.has_attribute?('new_name') # => true
+      #   Person.has_attribute?(:age)       # => true
+      #   Person.has_attribute?(:nothing)   # => false
       def has_attribute?(attr_name)
-        attribute_types.key?(attr_name.to_s)
+        attr_name = attr_name.to_s
+        attr_name = attribute_aliases[attr_name] || attr_name
+        attribute_types.key?(attr_name)
+      end
+
+      def _has_attribute?(attr_name) # :nodoc:
+        attribute_types.key?(attr_name)
       end
     end
 
     # Returns +true+ if the given attribute is in the attributes hash, otherwise +false+.
     #
     #   class Person < ActiveEntity::Base
+    #     alias_attribute :new_name, :name
     #   end
     #
     #   person = Person.new
-    #   person.has_attribute?(:name)    # => true
-    #   person.has_attribute?('age')    # => true
-    #   person.has_attribute?(:nothing) # => false
+    #   person.has_attribute?(:name)     # => true
+    #   person.has_attribute?(:new_name) # => true
+    #   person.has_attribute?('age')     # => true
+    #   person.has_attribute?(:nothing)  # => false
     def has_attribute?(attr_name)
-      @attributes.key?(attr_name.to_s)
+      attr_name = attr_name.to_s
+      attr_name = self.class.attribute_aliases[attr_name] || attr_name
+      @attributes.key?(attr_name)
+    end
+
+    def _has_attribute?(attr_name) # :nodoc:
+      @attributes.key?(attr_name)
     end
 
     # Returns an array of names for the attributes available on this object.
@@ -210,6 +236,7 @@ module ActiveEntity
     #   person.attribute_for_inspect(:tag_ids)
     #   # => "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"
     def attribute_for_inspect(attr_name)
+      attr_name = attr_name.to_s
       value = _read_attribute(attr_name)
       format_for_inspect(value)
     end
@@ -229,8 +256,9 @@ module ActiveEntity
     #   task.is_done = true
     #   task.attribute_present?(:title)   # => true
     #   task.attribute_present?(:is_done) # => true
-    def attribute_present?(attribute)
-      value = _read_attribute(attribute)
+    def attribute_present?(attr_name)
+      attr_name = attr_name.to_s
+      value = _read_attribute(attr_name)
       !value.nil? && !(value.respond_to?(:empty?) && value.empty?)
     end
 

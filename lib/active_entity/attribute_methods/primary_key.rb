@@ -16,29 +16,27 @@ module ActiveEntity
 
       # Returns the primary key column's value.
       def id
-        primary_key = self.class.primary_key
-        _read_attribute(primary_key) if primary_key
+        _read_attribute(@primary_key)
       end
 
       # Sets the primary key column's value.
       def id=(value)
-        primary_key = self.class.primary_key
-        _write_attribute(primary_key, value) if primary_key
+        _write_attribute(@primary_key, value)
       end
 
       # Queries the primary key column's value.
       def id?
-        query_attribute(self.class.primary_key)
+        query_attribute(@primary_key)
       end
 
       # Returns the primary key column's value before type cast.
       def id_before_type_cast
-        read_attribute_before_type_cast(self.class.primary_key)
+        read_attribute_before_type_cast(@primary_key)
       end
 
       # Returns the primary key column's previous value.
       def id_was
-        attribute_was(self.class.primary_key)
+        attribute_was(@primary_key)
       end
 
       private
