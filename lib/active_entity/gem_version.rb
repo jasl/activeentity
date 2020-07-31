@@ -7,10 +7,10 @@ module ActiveEntity
   end
 
   module VERSION
-    MAJOR = 0
-    MINOR = 0
-    TINY  = 1
-    PRE   = "beta18"
+    MAJOR = 6
+    MINOR = 1
+    TINY  = 0
+    PRE   = "alpha1"
 
     STRING = [MAJOR, MINOR, TINY, PRE].compact.join(".")
   end
