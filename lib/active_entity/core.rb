@@ -317,6 +317,7 @@ module ActiveEntity
       end
 
       def init_internals
+        @primary_key              = self.class.primary_key
         @readonly                 = false
         @marked_for_destruction   = false
 
