@@ -15,13 +15,13 @@ gemspec
 
 # Your gem is dependent on dev or edge Rails. Once you can lock this
 # dependency down to a specific version, move it to your gemspec.
-gem "rails", "~> 6.0"
+gem "rails", "~> 6.1"
 # gem "rails", github: "rails/rails"
 
 gem "sqlite3"
 
 # Use Puma as the app server
-gem "puma", "~> 4.3"
+gem "puma"
 # Use SCSS for stylesheets
 # gem "sassc-rails"
 # Use Uglifier as compressor for JavaScript assets
