@@ -23,6 +23,6 @@ Gem::Specification.new do |s|
   # s.extra_rdoc_files = %w(README.rdoc)
   # s.rdoc_options.concat %w[--main README.rdoc]
 
-  s.add_dependency "activesupport", "~> 6.0", "< 7.0"
-  s.add_dependency "activemodel", "~> 6.0", "< 7.0"
+  s.add_dependency "activesupport", ">= 6.0", "< 8.0"
+  s.add_dependency "activemodel", ">= 6.0", "< 8.0"
 end

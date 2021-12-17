@@ -48,7 +48,7 @@ module ActiveEntity
 
         duplicate_records.each do |r|
           if key.is_a? Symbol
-            r.errors.add(key, :duplicated, options)
+            r.errors.add(key, :duplicated, **options)
 
             # Hack the record
             normalized_attribute = normalize_attribute(attribute, indexed_attribute, association_or_value.index(r), key)
@@ -59,7 +59,7 @@ module ActiveEntity
             record.errors.details[normalized_attribute.to_sym].uniq!
           elsif key.is_a? Array
             key.each do |attr|
-              r.errors.add(attr, :duplicated, options)
+              r.errors.add(attr, :duplicated, **options)
 
               # Hack the record
               normalized_attribute = normalize_attribute(attribute, indexed_attribute, association_or_value.index(r), attr)
