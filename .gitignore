@@ -37,3 +37,5 @@ yarn-error.log
 /sqlnet.log
 /test/config.yml
 /test/fixtures/*.sqlite*
+
+.ruby-version
