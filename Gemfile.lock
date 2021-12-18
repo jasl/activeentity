@@ -2,8 +2,8 @@ PATH
   remote: .
   specs:
     activeentity (6.1.1)
-      activemodel (>= 6.0, < 8.0)
-      activesupport (>= 6.0, < 8.0)
+      activemodel (>= 6.0, < 7.0)
+      activesupport (>= 6.0, < 7.0)
 
 GEM
   remote: https://rubygems.org/

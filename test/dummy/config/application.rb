@@ -15,8 +15,9 @@ require "action_view/railtie"
 require "sprockets/railtie"
 require "rails/test_unit/railtie"
 
+require "active_entity/railtie"
+
 Bundler.require(*Rails.groups)
-require "active_entity"
 
 module Dummy
   class Application < Rails::Application
