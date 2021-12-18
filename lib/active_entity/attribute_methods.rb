@@ -23,14 +23,14 @@ module ActiveEntity
 
     RESTRICTED_CLASS_METHODS = %w(private public protected allocate new name parent superclass)
 
-    class GeneratedAttributeMethods < Module #:nodoc:
+    class GeneratedAttributeMethods < Module # :nodoc:
       include Mutex_m
     end
 
     class << self
       def dangerous_attribute_methods # :nodoc:
         @dangerous_attribute_methods ||= (
-        Base.instance_methods +
+          Base.instance_methods +
           Base.private_instance_methods -
           Base.superclass.instance_methods -
           Base.superclass.private_instance_methods
@@ -39,7 +39,7 @@ module ActiveEntity
     end
 
     module ClassMethods
-      def inherited(child_class) #:nodoc:
+      def inherited(child_class) # :nodoc:
         child_class.initialize_generated_modules
         super
       end
@@ -151,12 +151,13 @@ module ActiveEntity
           attribute_types.keys
         else
           []
-        end
+        end.freeze
       end
 
       # Returns true if the given attribute exists, otherwise false.
       #
       #   class Person < ActiveEntity::Base
+      #     alias_attribute :new_name, :name
       #   end
       #
       #   Person.has_attribute?('name')     # => true
@@ -173,6 +174,37 @@ module ActiveEntity
         attribute_types.key?(attr_name)
       end
     end
+
+    # A Person object with a name attribute can ask <tt>person.respond_to?(:name)</tt>,
+    # <tt>person.respond_to?(:name=)</tt>, and <tt>person.respond_to?(:name?)</tt>
+    # which will all return +true+. It also defines the attribute methods if they have
+    # not been generated.
+    #
+    #   class Person < ActiveEntity::Base
+    #   end
+    #
+    #   person = Person.new
+    #   person.respond_to?(:name)    # => true
+    #   person.respond_to?(:name=)   # => true
+    #   person.respond_to?(:name?)   # => true
+    #   person.respond_to?('age')    # => true
+    #   person.respond_to?('age=')   # => true
+    #   person.respond_to?('age?')   # => true
+    #   person.respond_to?(:nothing) # => false
+    # def respond_to?(name, include_private = false)
+    #   unless super
+    #     # If the result is true then check for the select case.
+    #     # For queries selecting a subset of columns, return false for unselected columns.
+    #     # We check defined?(@attributes) not to issue warnings if called on objects that
+    #     # have been allocated but not yet initialized.
+    #     if defined?(@attributes)
+    #       # TODO: Improve this
+    #       return _has_attribute?(name.to_s.delete_suffix("=").delete_suffix("?"))
+    #     end
+    #   end
+    #
+    #   false
+    # end
 
     # Returns +true+ if the given attribute is in the attributes hash, otherwise +false+.
     #
@@ -221,9 +253,8 @@ module ActiveEntity
 
     # Returns an <tt>#inspect</tt>-like string for the value of the
     # attribute +attr_name+. String attributes are truncated up to 50
-    # characters, Date and Time attributes are returned in the
-    # <tt>:db</tt> format. Other attributes return the value of
-    # <tt>#inspect</tt> without modification.
+    # characters. Other attributes return the value of <tt>#inspect</tt>
+    # without modification.
     #
     #   person = Person.create!(name: 'David Heinemeier Hansson ' * 3)
     #
@@ -231,14 +262,15 @@ module ActiveEntity
     #   # => "\"David Heinemeier Hansson David Heinemeier Hansson ...\""
     #
     #   person.attribute_for_inspect(:created_at)
-    #   # => "\"2012-10-22 00:15:07\""
+    #   # => "\"2012-10-22 00:15:07.000000000 +0000\""
     #
     #   person.attribute_for_inspect(:tag_ids)
     #   # => "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"
     def attribute_for_inspect(attr_name)
       attr_name = attr_name.to_s
+      attr_name = self.class.attribute_aliases[attr_name] || attr_name
       value = _read_attribute(attr_name)
-      format_for_inspect(value)
+      format_for_inspect(attr_name, value)
     end
 
     # Returns +true+ if the specified +attribute+ has been set by the user or by a
@@ -258,6 +290,7 @@ module ActiveEntity
     #   task.attribute_present?(:is_done) # => true
     def attribute_present?(attr_name)
       attr_name = attr_name.to_s
+      attr_name = self.class.attribute_aliases[attr_name] || attr_name
       value = _read_attribute(attr_name)
       !value.nil? && !(value.respond_to?(:empty?) && value.empty?)
     end
@@ -297,6 +330,39 @@ module ActiveEntity
       write_attribute(attr_name, value)
     end
 
+    # Returns the name of all database fields which have been read from this
+    # model. This can be useful in development mode to determine which fields
+    # need to be selected. For performance critical pages, selecting only the
+    # required fields can be an easy performance win (assuming you aren't using
+    # all of the fields on the model).
+    #
+    # For example:
+    #
+    #   class PostsController < ActionController::Base
+    #     after_action :print_accessed_fields, only: :index
+    #
+    #     def index
+    #       @posts = Post.all
+    #     end
+    #
+    #     private
+    #
+    #     def print_accessed_fields
+    #       p @posts.first.accessed_fields
+    #     end
+    #   end
+    #
+    # Which allows you to quickly change your code to:
+    #
+    #   class PostsController < ActionController::Base
+    #     def index
+    #       @posts = Post.select(:id, :title, :author_id, :updated_at)
+    #     end
+    #   end
+    def accessed_fields
+      @attributes.accessed
+    end
+
     private
 
       def attribute_method?(attr_name)
@@ -304,13 +370,23 @@ module ActiveEntity
         defined?(@attributes) && @attributes.key?(attr_name)
       end
 
-      def format_for_inspect(value)
-        if value.is_a?(String) && value.length > 50
-          "#{value[0, 50]}...".inspect
-        elsif value.is_a?(Date) || value.is_a?(Time)
-          %("#{value.to_s(:db)}")
-        else
+      def attributes_with_values(attribute_names)
+        attribute_names.index_with { |name| @attributes[name] }
+      end
+
+      def format_for_inspect(name, value)
+        if value.nil?
           value.inspect
+        else
+          inspected_value = if value.is_a?(String) && value.length > 50
+            "#{value[0, 50]}...".inspect
+          elsif value.is_a?(Date) || value.is_a?(Time)
+            %("#{value.to_formatted_s(:inspect)}")
+          else
+            value.inspect
+          end
+
+          inspection_filter.filter_param(name, inspected_value)
         end
       end
 

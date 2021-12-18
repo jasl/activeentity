@@ -4,7 +4,7 @@ module ActiveEntity
   module Associations
     module Embeds
       # = Active Entity Has One Association
-      class EmbedsOneAssociation < SingularAssociation #:nodoc:
+      class EmbedsOneAssociation < SingularAssociation # :nodoc:
         private
 
           def replace(record)

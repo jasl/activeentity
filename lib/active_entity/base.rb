@@ -5,10 +5,10 @@ require "active_support/dependencies"
 require "active_support/descendants_tracker"
 require "active_support/time"
 require "active_support/core_ext/class/subclasses"
-require "active_entity/attribute_decorators"
 require "active_entity/attributes"
+require "active_entity/type_caster"
 
-module ActiveEntity #:nodoc:
+module ActiveEntity # :nodoc:
   # = Active Entity
   #
   # Active Entity objects don't specify their attributes directly, but rather infer them from
@@ -17,7 +17,7 @@ module ActiveEntity #:nodoc:
   # Active Entity objects. The mapping that binds a given Active Entity class to a certain
   # database table will happen automatically in most common cases, but can be overwritten for the uncommon ones.
   #
-  # See the mapping rules in table_name and the full example in link:files/activeentity/README_rdoc.html for more insight.
+  # See the mapping rules in table_name and the full example in link:files/ActiveEntity/README_rdoc.html for more insight.
   #
   # == Creation
   #
@@ -132,6 +132,23 @@ module ActiveEntity #:nodoc:
   #
   #   anonymous = User.new(name: "")
   #   anonymous.name? # => false
+  #
+  # Query methods will also respect any overwrites of default accessors:
+  #
+  #   class User
+  #     # Has admin boolean column
+  #     def admin
+  #       false
+  #     end
+  #   end
+  #
+  #   user.update(admin: true)
+  #
+  #   user.read_attribute(:admin)  # => true, gets the column value
+  #   user[:admin] # => true, also gets the column value
+  #
+  #   user.admin   # => false, due to the getter overwrite
+  #   user.admin?  # => false, due to the getter overwrite
   #
   # == Accessing attributes before they have been typecasted
   #
@@ -269,7 +286,7 @@ module ActiveEntity #:nodoc:
     extend Aggregations::ClassMethods
 
     include Core
-    include Persistence
+    include StubPersistence
     include ReadonlyAttributes
     include ModelSchema
     include Inheritance
@@ -278,9 +295,9 @@ module ActiveEntity #:nodoc:
     include Integration
     include Validations
     include Attributes
-    include AttributeDecorators
     include AttributeMethods
     include Callbacks
+    include Timestamp
     include Associations
     include ValidateEmbedsAssociation
     include NestedAttributes

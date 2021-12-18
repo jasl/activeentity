@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "active_support/core_ext/string/filters"
-require "concurrent/map"
 
 module ActiveEntity
   # = Active Entity Reflection
@@ -14,22 +13,18 @@ module ActiveEntity
     end
 
     class << self
-      def create(macro, name, scope, options, ar_or_ae)
-        reflection_class_for(macro).new(name, scope, options, ar_or_ae)
-
-        # TODO: Support bridge to Active Entity
-        # reflection = reflection_class_for(macro).new(name, scope, options, ar_or_ae)
-        # options[:through] ? ActiveRecord::ThroughReflection.new(reflection) : reflection
+      def create(macro, name, scope, options, ae)
+        reflection_class_for(macro).new(name, scope, options, ae)
       end
 
-      def add_reflection(ar_or_ae, name, reflection)
-        ar_or_ae.clear_reflections_cache
-        name = name.to_s
-        ar_or_ae._reflections = ar_or_ae._reflections.except(name).merge!(name => reflection)
+      def add_reflection(ae, name, reflection)
+        ae.clear_reflections_cache
+        name = -name.to_s
+        ae._reflections = ae._reflections.except(name).merge!(name => reflection)
       end
 
       def add_aggregate_reflection(ae, name, reflection)
-        ae.aggregate_reflections = ae.aggregate_reflections.merge(name.to_s => reflection)
+        ae.aggregate_reflections = ae.aggregate_reflections.merge(-name.to_s => reflection)
       end
 
       private
@@ -78,21 +73,21 @@ module ActiveEntity
       #
       def reflections
         @__reflections ||= begin
-                             ref = {}
+          ref = {}
 
-                             _reflections.each do |name, reflection|
-                               parent_reflection = reflection.parent_reflection
+          _reflections.each do |name, reflection|
+            parent_reflection = reflection.parent_reflection
 
-                               if parent_reflection
-                                 parent_name = parent_reflection.name
-                                 ref[parent_name.to_s] = parent_reflection
-                               else
-                                 ref[name] = reflection
-                               end
-                             end
+            if parent_reflection
+              parent_name = parent_reflection.name
+              ref[parent_name.to_s] = parent_reflection
+            else
+              ref[name] = reflection
+            end
+          end
 
-                             ref
-                           end
+          ref
+        end
       end
 
       # Returns an array of AssociationReflection objects for all the
@@ -120,8 +115,13 @@ module ActiveEntity
         reflections[association.to_s]
       end
 
-      def _reflect_on_association(association) #:nodoc:
+      def _reflect_on_association(association) # :nodoc:
         _reflections[association.to_s]
+      end
+
+      # Returns an array of AssociationReflection objects for all associations which have <tt>:autosave</tt> enabled.
+      def reflect_on_all_autosave_associations
+        reflections.values.select { |reflection| reflection.options[:autosave] }
       end
 
       def clear_reflections_cache # :nodoc:
@@ -142,19 +142,8 @@ module ActiveEntity
     #     ThroughReflection
     #     PolymorphicReflection
     #     RuntimeReflection
-
-    class AbstractReflection
+    class AbstractReflection # :nodoc:
       def embedded?
-        false
-      end
-    end
-
-    class AbstractEmbeddedReflection < AbstractReflection # :nodoc:
-      def embedded?
-        true
-      end
-
-      def through_reflection?
         false
       end
 
@@ -169,7 +158,7 @@ module ActiveEntity
       # <tt>composed_of :balance, class_name: 'Money'</tt> returns <tt>'Money'</tt>
       # <tt>has_many :clients</tt> returns <tt>'Client'</tt>
       def class_name
-        @class_name ||= (options[:class_name] || derive_class_name).to_s
+        @class_name ||= -(options[:class_name] || derive_class_name).to_s
       end
 
       def inverse_of
@@ -182,6 +171,13 @@ module ActiveEntity
         if has_inverse? && inverse_of.nil?
           raise InverseOfAssociationNotFoundError.new(self)
         end
+        if has_inverse? && inverse_of == self
+          raise InverseOfAssociationRecursiveError.new(self)
+        end
+      end
+
+      def alias_candidate(name)
+        "#{plural_name}_#{name}"
       end
 
       protected
@@ -189,16 +185,26 @@ module ActiveEntity
         def actual_source_reflection # FIXME: this is a horrible name
           self
         end
+
+      private
+
+        def ensure_option_not_given_as_class!(option_name)
+          if options[option_name] && options[option_name].class == Class
+            raise ArgumentError, "A class was passed to `:#{option_name}` but we are expecting a string."
+          end
+        end
     end
 
     # Base class for AggregateReflection and AssociationReflection. Objects of
     # AggregateReflection and AssociationReflection are returned by the Reflection::ClassMethods.
-    class MacroEmbeddedReflection < AbstractEmbeddedReflection
+    class MacroReflection < AbstractReflection
       # Returns the name of the macro.
       #
       # <tt>composed_of :balance, class_name: 'Money'</tt> returns <tt>:balance</tt>
       # <tt>has_many :clients</tt> returns <tt>:clients</tt>
       attr_reader :name
+
+      attr_reader :scope
 
       # Returns the hash of options used for the macro.
       #
@@ -208,12 +214,23 @@ module ActiveEntity
 
       attr_reader :active_entity
 
+      attr_reader :plural_name # :nodoc:
+
       def initialize(name, scope, options, active_entity)
         @name          = name
         @scope         = scope
         @options       = options
         @active_entity = active_entity
         @klass         = options[:anonymous_class]
+        @plural_name   = name.to_s.pluralize
+      end
+
+      def autosave=(autosave)
+        @options[:autosave] = autosave
+        parent_reflection = self.parent_reflection
+        if parent_reflection
+          parent_reflection.autosave = autosave
+        end
       end
 
       # Returns the class for the macro.
@@ -244,9 +261,9 @@ module ActiveEntity
       def ==(other_aggregation)
         super ||
           other_aggregation.kind_of?(self.class) &&
-            name == other_aggregation.name &&
-            !other_aggregation.options.nil? &&
-            active_entity == other_aggregation.active_entity
+          name == other_aggregation.name &&
+          !other_aggregation.options.nil? &&
+          active_entity == other_aggregation.active_entity
       end
 
       private
@@ -258,7 +275,7 @@ module ActiveEntity
 
     # Holds all the metadata about an aggregation as it was specified in the
     # Active Entity class.
-    class AggregateReflection < MacroEmbeddedReflection #:nodoc:
+    class AggregateReflection < MacroReflection # :nodoc:
       def mapping
         mapping = options[:mapping] || [name, name]
         mapping.first.is_a?(Array) ? mapping : [mapping]
@@ -267,32 +284,57 @@ module ActiveEntity
 
     # Holds all the metadata about an association as it was specified in the
     # Active Entity class.
-    class EmbeddedAssociationReflection < MacroEmbeddedReflection #:nodoc:
+    class EmbeddedAssociationReflection < MacroReflection # :nodoc:
       def compute_class(name)
-        active_entity.send(:compute_type, name)
+        msg = <<-MSG.squish
+          Rails couldn't find a valid model for #{name} association.
+          Please provide the :class_name option on the association declaration.
+          If :class_name is already provided, make sure it's an ActiveEntity::Base subclass.
+        MSG
+
+        begin
+          klass = active_entity.send(:compute_type, name)
+
+          unless klass < ActiveEntity::Base
+            raise ArgumentError, msg
+          end
+
+          klass
+        rescue NameError
+          raise NameError, msg
+        end
       end
 
-      attr_reader :type
+      attr_reader :type, :foreign_type
       attr_accessor :parent_reflection # Reflection
 
       def initialize(name, scope, options, active_entity)
         super
-        @constructable = calculate_constructable(macro, options)
 
-        if options[:class_name] && options[:class_name].class == Class
-          raise ArgumentError, "A class was passed to `:class_name` but we are expecting a string."
-        end
-      end
-
-      def constructable? # :nodoc:
-        @constructable
+        ensure_option_not_given_as_class!(:class_name)
       end
 
       def check_validity!
         check_validity_of_inverse!
       end
 
+      def join_id_for(owner) # :nodoc:
+        owner[join_foreign_key]
+      end
+
+      def through_reflection
+        nil
+      end
+
+      def source_reflection
+        self
+      end
+
       def nested?
+        false
+      end
+
+      def has_scope?
         false
       end
 
@@ -325,25 +367,23 @@ module ActiveEntity
         !!options[:validate]
       end
 
-      # Returns +true+ if +self+ is a +belongs_to+ reflection.
+      # Returns +true+ if +self+ is a +embedded_in+ reflection.
       def embedded_in?; false; end
 
-      # Returns +true+ if +self+ is a +has_one+ reflection.
+      # Returns +true+ if +self+ is a +embeds_one+ reflection.
       def embeds_one?; false; end
 
       def association_class; raise NotImplementedError; end
 
-      VALID_AUTOMATIC_INVERSE_MACROS = [:embeds_many, :embeds_one, :embedded_in]
+      def add_as_source(seed)
+        seed
+      end
 
       def extensions
         Array(options[:extend])
       end
 
       private
-
-        def calculate_constructable(_macro, _options)
-          true
-        end
 
         # Attempts to find the inverse association name automatically.
         # If it cannot find a suitable inverse association name, it returns
@@ -358,19 +398,9 @@ module ActiveEntity
 
         # returns either +nil+ or the inverse association name that it finds.
         def automatic_inverse_of
-          return unless can_find_inverse_of_automatically?(self)
+          if can_find_inverse_of_automatically?(self)
+            inverse_name = ActiveSupport::Inflector.underscore(active_entity.name.demodulize).to_sym
 
-          inverse_name_candidates =
-            begin
-              active_entity_name = active_entity.name.demodulize
-              [active_entity_name, ActiveSupport::Inflector.pluralize(active_entity_name)]
-            end
-
-          inverse_name_candidates.map! do |candidate|
-            ActiveSupport::Inflector.underscore(candidate).to_sym
-          end
-
-          inverse_name_candidates.detect do |inverse_name|
             begin
               reflection = klass._reflect_on_association(inverse_name)
             rescue NameError
@@ -379,7 +409,9 @@ module ActiveEntity
               reflection = false
             end
 
-            valid_inverse_reflection?(reflection)
+            if valid_inverse_reflection?(reflection)
+              inverse_name
+            end
           end
         end
 
@@ -389,8 +421,9 @@ module ActiveEntity
         # with the current reflection's klass name.
         def valid_inverse_reflection?(reflection)
           reflection &&
+            reflection != self &&
             klass <= reflection.active_entity &&
-            can_find_inverse_of_automatically?(reflection)
+            can_find_inverse_of_automatically?(reflection, true)
         end
 
         # Checks to see if the reflection doesn't have any options that prevent
@@ -399,12 +432,8 @@ module ActiveEntity
         # have <tt>has_many</tt>, <tt>has_one</tt>, <tt>belongs_to</tt> associations.
         # Third, we must not have options such as <tt>:foreign_key</tt>
         # which prevent us from correctly guessing the inverse association.
-        #
-        # Anything with a scope can additionally ruin our attempt at finding an
-        # inverse, so we exclude reflections with scopes.
-        def can_find_inverse_of_automatically?(reflection)
-          reflection.options[:inverse_of] != false &&
-            VALID_AUTOMATIC_INVERSE_MACROS.include?(reflection.macro)
+        def can_find_inverse_of_automatically?(reflection, _inverse_reflection = false)
+          reflection.options[:inverse_of] != false
         end
 
         def derive_class_name

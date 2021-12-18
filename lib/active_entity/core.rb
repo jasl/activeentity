@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "active_support/core_ext/enumerable"
 require "active_support/core_ext/hash/indifferent_access"
 require "active_support/core_ext/string/filters"
 require "active_support/parameter_filter"
@@ -16,18 +17,47 @@ module ActiveEntity
       # Accepts a logger conforming to the interface of Log4r which is then
       # passed on to any new database connections made and which can be
       # retrieved on both a class and instance level by calling +logger+.
-      mattr_accessor :logger, instance_writer: false
+      class_attribute :logger, instance_writer: false
 
-      ##
-      # :singleton-method:
-      # Determines whether to use Time.utc (using :utc) or Time.local (using :local) when pulling
-      # dates and times from the database. This is set to :utc by default.
-      mattr_accessor :default_timezone, instance_writer: false, default: :utc
+      class_attribute :embeds_many_inversing, instance_accessor: false, default: false
+
+      def self.application_entity_class? # :nodoc:
+        if ActiveEntity.application_entity_class
+          self == ActiveEntity.application_entity_class
+        else
+          if defined?(ApplicationEntity) && self == ApplicationEntity
+            true
+          end
+        end
+      end
 
       self.filter_attributes = []
     end
 
     module ClassMethods
+      %w(
+        default_timezone index_nested_attribute_errors
+        application_entity_class
+      ).each do |attr|
+        module_eval(<<~RUBY, __FILE__, __LINE__ + 1)
+          def #{attr}
+            ActiveSupport::Deprecation.warn(<<~MSG)
+              ActiveEntity::Base.#{attr} is deprecated and will be removed in Rails 7.1.
+              Use `ActiveEntity.#{attr}` instead.
+            MSG
+            ActiveEntity.#{attr}
+          end
+
+          def #{attr}=(value)
+            ActiveSupport::Deprecation.warn(<<~MSG)
+              ActiveEntity::Base.#{attr}= is deprecated and will be removed in Rails 7.1.
+              Use `ActiveEntity.#{attr}=` instead.
+            MSG
+            ActiveEntity.#{attr} = value
+          end
+        RUBY
+      end
+
       def initialize_generated_modules # :nodoc:
         generated_association_methods
       end
@@ -52,7 +82,21 @@ module ActiveEntity
       end
 
       # Specifies columns which shouldn't be exposed while calling +#inspect+.
-      attr_writer :filter_attributes
+      def filter_attributes=(filter_attributes)
+        @inspection_filter = nil
+        @filter_attributes = filter_attributes
+      end
+
+      def inspection_filter # :nodoc:
+        if defined?(@filter_attributes)
+          @inspection_filter ||= begin
+            mask = InspectionMask.new(ActiveSupport::ParameterFilter::FILTERED)
+            ActiveSupport::ParameterFilter.new(@filter_attributes, mask: mask)
+          end
+        else
+          superclass.inspection_filter
+        end
+      end
 
       # Returns a string like 'Post(id:integer, title:string, body:text)'
       def inspect # :nodoc:
@@ -68,6 +112,10 @@ module ActiveEntity
       def ===(object) # :nodoc:
         object.is_a?(self)
       end
+
+      def type_caster # :nodoc:
+        TypeCaster::Map.new(self)
+      end
     end
 
     # New objects can be instantiated as either empty (pass no construction parameter) or pre-set with
@@ -79,6 +127,7 @@ module ActiveEntity
     #   # Instantiates a single new object
     #   User.new(first_name: 'Jamie')
     def initialize(attributes = nil)
+      @new_record = true
       @attributes = self.class._default_attributes.deep_dup
 
       init_internals
@@ -107,6 +156,7 @@ module ActiveEntity
     #   post.init_with(coder)
     #   post.title # => 'hello world'
     def init_with(coder, &block)
+      coder = LegacyYamlAdapter.convert(coder)
       attributes = self.class.yaml_encoder.decode(coder)
       init_with_attributes(attributes, coder["new_record"], &block)
     end
@@ -115,14 +165,14 @@ module ActiveEntity
     # Initialize an empty model object from +attributes+.
     # +attributes+ should be an attributes object, and unlike the
     # `initialize` method, no assignment calls are made per attribute.
-    def init_with_attributes(attributes) # :nodoc:
+    def init_with_attributes(attributes, new_record = false) # :nodoc:
+      @new_record = new_record
       @attributes = attributes
 
       init_internals
 
       yield self if block_given?
 
-      _run_find_callbacks
       _run_initialize_callbacks
 
       self
@@ -200,6 +250,8 @@ module ActiveEntity
     # Delegates to id in order to allow two records of the same type and id to work with something like:
     #   [ Person.find(1), Person.find(2), Person.find(3) ] & [ Person.find(1), Person.find(4) ] # => [ Person.find(1) ]
     def hash
+      id = self.id
+
       if id
         self.class.hash ^ id.hash
       else
@@ -237,8 +289,7 @@ module ActiveEntity
       false
     end
 
-    # Returns +true+ if the record is read only. Records loaded through joins with piggy-back
-    # attributes will be marked as read only since they cannot be saved.
+    # Returns +true+ if the record is read only.
     def readonly?
       @readonly
     end
@@ -253,18 +304,11 @@ module ActiveEntity
       # We check defined?(@attributes) not to issue warnings if the object is
       # allocated but not initialized.
       inspection = if defined?(@attributes) && @attributes
-        self.class.attribute_names.collect do |name|
-          if has_attribute?(name)
-            attr = _read_attribute(name)
-            value = if attr.nil?
-              attr.inspect
-            else
-              attr = format_for_inspect(attr)
-              inspection_filter.filter_param(name, attr)
-            end
-            "#{name}: #{value}"
+        self.class.attribute_names.filter_map do |name|
+          if _has_attribute?(name)
+            "#{name}: #{attribute_for_inspect(name)}"
           end
-        end.compact.join(", ")
+        end.join(", ")
       else
         "not initialized"
       end
@@ -278,7 +322,7 @@ module ActiveEntity
       return super if custom_inspect_method_defined?
       pp.object_address_group(self) do
         if defined?(@attributes) && @attributes
-          attr_names = self.class.attribute_names.select { |name| has_attribute?(name) }
+          attr_names = self.class.attribute_names.select { |name| _has_attribute?(name) }
           pp.seplist(attr_names, proc { pp.text "," }) do |attr_name|
             pp.breakable " "
             pp.group(1) do
@@ -299,7 +343,12 @@ module ActiveEntity
 
     # Returns a hash of the given methods with their names as keys and returned values as values.
     def slice(*methods)
-      Hash[methods.flatten.map! { |method| [method, public_send(method)] }].with_indifferent_access
+      methods.flatten.index_with { |method| public_send(method) }.with_indifferent_access
+    end
+
+    # Returns an array of the values returned by the given methods.
+    def values_at(*methods)
+      methods.flatten.map! { |method| public_send(method) }
     end
 
     private
@@ -317,11 +366,14 @@ module ActiveEntity
       end
 
       def init_internals
-        @primary_key              = self.class.primary_key
         @readonly                 = false
         @marked_for_destruction   = false
 
-        self.class.define_attribute_methods
+        klass = self.class
+
+        @primary_key         = klass.primary_key
+
+        klass.define_attribute_methods
       end
 
       def initialize_internals_callback
@@ -339,10 +391,7 @@ module ActiveEntity
       private_constant :InspectionMask
 
       def inspection_filter
-        @inspection_filter ||= begin
-          mask = InspectionMask.new(ActiveSupport::ParameterFilter::FILTERED)
-          ActiveSupport::ParameterFilter.new(self.class.filter_attributes, mask: mask)
-        end
+        self.class.inspection_filter
       end
   end
 end

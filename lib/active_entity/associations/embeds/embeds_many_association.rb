@@ -8,7 +8,7 @@ module ActiveEntity
       #
       # If the association has a <tt>:through</tt> option further specialization
       # is provided by its child HasManyThroughAssociation.
-      class EmbedsManyAssociation < CollectionAssociation #:nodoc:
+      class EmbedsManyAssociation < CollectionAssociation # :nodoc:
       end
     end
   end

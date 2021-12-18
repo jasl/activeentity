@@ -11,11 +11,11 @@ require "active_entity/type/time"
 require "active_entity/type/text"
 require "active_entity/type/unsigned_integer"
 
-require "active_entity/type/modifiers/array"
-require "active_entity/type/modifiers/array_without_blank"
-
 require "active_entity/type/serialized"
 require "active_entity/type/registry"
+
+require "active_entity/type/modifiers/array"
+require "active_entity/type/modifiers/range"
 
 module ActiveEntity
   module Type
@@ -52,11 +52,9 @@ module ActiveEntity
     Decimal = ActiveModel::Type::Decimal
     Float = ActiveModel::Type::Float
     Integer = ActiveModel::Type::Integer
+    ImmutableString = ActiveModel::Type::ImmutableString
     String = ActiveModel::Type::String
     Value = ActiveModel::Type::Value
-
-    add_modifier({ array: true }, Modifiers::Array)
-    add_modifier({ array_without_blank: true }, Modifiers::ArrayWithoutBlank)
 
     register(:big_integer, Type::BigInteger, override: false)
     register(:binary, Type::Binary, override: false)
@@ -67,9 +65,14 @@ module ActiveEntity
     register(:float, Type::Float, override: false)
     register(:integer, Type::Integer, override: false)
     register(:unsigned_integer, Type::UnsignedInteger, override: false)
+    register(:immutable_string, Type::ImmutableString, override: false)
     register(:json, Type::Json, override: false)
     register(:string, Type::String, override: false)
     register(:text, Type::Text, override: false)
     register(:time, Type::Time, override: false)
+
+    add_modifier({ array: true }, Modifiers::Array) # TODO: Need typed-array
+    add_modifier({ array_without_blank: true }, Modifiers::Array)
+    add_modifier({ range: true }, Modifiers::Range)
   end
 end

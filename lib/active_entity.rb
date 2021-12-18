@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 #--
-# Copyright (c) 2004-2020 David Heinemeier Hansson
+# Copyright (c) 2004-2021 David Heinemeier Hansson
 #
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
@@ -26,9 +26,8 @@
 require "active_support"
 require "active_support/rails"
 require "active_model"
+require "arel"
 require "yaml"
-
-require "core_ext/array_without_blank"
 
 require "active_entity/version"
 require "active_model/attribute_set"
@@ -45,11 +44,13 @@ module ActiveEntity
   autoload :Integration
   autoload :ModelSchema
   autoload :NestedAttributes
-  autoload :Persistence
   autoload :ReadonlyAttributes
+  autoload :RecordInvalid, "active_entity/validations"
   autoload :Reflection
   autoload :Serialization
   autoload :Store
+  autoload :StubPersistence
+  autoload :Timestamp
   autoload :Translation
   autoload :Validations
 
@@ -64,8 +65,8 @@ module ActiveEntity
   end
 
   module Coders
-    autoload :YAMLColumn, "active_entity/coders/yaml_column"
     autoload :JSON, "active_entity/coders/json"
+    autoload :YAMLColumn, "active_entity/coders/yaml_column"
   end
 
   module AttributeMethods
@@ -77,15 +78,34 @@ module ActiveEntity
       autoload :PrimaryKey
       autoload :Query
       autoload :Read
+      autoload :Serialization
       autoload :TimeZoneConversion
       autoload :Write
-      autoload :Serialization
     end
   end
 
+  singleton_class.attr_reader :default_timezone
+
+  # Determines whether to use Time.utc (using :utc) or Time.local (using :local) when pulling
+  # dates and times from the database. This is set to :utc by default.
+  def self.default_timezone=(default_timezone)
+    unless %i(local utc).include?(default_timezone)
+      raise ArgumentError, "default_timezone must be either :utc (default) or :local."
+    end
+
+    @default_timezone = default_timezone
+  end
+
+  self.default_timezone = :utc
+
+  singleton_class.attr_accessor :index_nested_attribute_errors
+  self.index_nested_attribute_errors = false
+
+  singleton_class.attr_accessor :application_entity_class
+  self.application_entity_class = nil
+
   def self.eager_load!
     super
-
     ActiveEntity::Associations.eager_load!
     ActiveEntity::AttributeMethods.eager_load!
   end
@@ -96,4 +116,5 @@ ActiveSupport.on_load(:i18n) do
 end
 
 YAML.load_tags["!ruby/object:ActiveEntity::AttributeSet"] = "ActiveModel::AttributeSet"
+YAML.load_tags["!ruby/object:ActiveEntity::Attribute::FromDatabase"] = "ActiveModel::Attribute::FromDatabase"
 YAML.load_tags["!ruby/object:ActiveEntity::LazyAttributeHash"] = "ActiveModel::LazyAttributeHash"

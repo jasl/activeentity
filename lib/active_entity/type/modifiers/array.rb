@@ -6,6 +6,8 @@ module ActiveEntity
       class Array < ActiveModel::Type::Value # :nodoc:
         include ActiveModel::Type::Helpers::Mutable
 
+        Data = Struct.new(:encoder, :values) # :nodoc:
+
         attr_reader :subtype, :delimiter
         delegate :type, :user_input_in_time_zone, :limit, :precision, :scale, to: :subtype
 
@@ -18,6 +20,8 @@ module ActiveEntity
           case value
           when ::String
             type_cast_array(value.split(@delimiter), :deserialize)
+          when Data
+            type_cast_array(value.values, :deserialize)
           else
             super
           end

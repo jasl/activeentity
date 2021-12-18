@@ -26,7 +26,7 @@ module ActiveEntity
       #
       # If you need to work on all current children, new and existing records,
       # +load_target+ and the +loaded+ flag are your friends.
-      class CollectionAssociation < Association #:nodoc:
+      class CollectionAssociation < Association # :nodoc:
         def initialize(owner, reflection)
           super
 
@@ -35,6 +35,8 @@ module ActiveEntity
 
         # Implements the reader method, e.g. foo.items for Foo.has_many :items
         def reader
+          ensure_klass_exists!
+
           @proxy ||= CollectionProxy.new(klass, self)
         end
 
@@ -148,10 +150,21 @@ module ActiveEntity
           end
         end
 
-        def add_to_target(record, skip_callbacks = false, &block)
-          # index = @target.index(record)
-          # replace_on_target(record, index, skip_callbacks, &block)
-          replace_on_target(record, nil, skip_callbacks, &block)
+        def add_to_target(record, skip_callbacks: false, replace: false, &block)
+          replace_on_target(record, skip_callbacks, replace: replace, &block)
+        end
+
+        def target=(record)
+          return super unless reflection.klass.embeds_many_inversing
+
+          case record
+          when nil
+            # It's not possible to remove the record from the inverse association.
+          when Array
+            super
+          else
+            replace_on_target(record, true, replace: true, inversing: true)
+          end
         end
 
         private
@@ -175,8 +188,14 @@ module ActiveEntity
             records
           end
 
-          def replace_on_target(record, index, skip_callbacks)
-            callback(:before_add, record) unless skip_callbacks
+          def replace_on_target(record, skip_callbacks, replace:, inversing: false)
+            if replace
+              index = @target.index(record)
+            end
+
+            catch(:abort) do
+              callback(:before_add, record)
+            end || return unless skip_callbacks
 
             set_inverse_instance(record)
 
@@ -201,7 +220,11 @@ module ActiveEntity
 
           def callbacks_for(callback_name)
             full_callback_name = "#{callback_name}_for_#{reflection.name}"
-            owner.class.send(full_callback_name)
+            if owner.class.respond_to?(full_callback_name)
+              owner.class.send(full_callback_name)
+            else
+              []
+            end
           end
       end
     end

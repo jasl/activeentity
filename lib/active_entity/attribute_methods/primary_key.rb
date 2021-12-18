@@ -31,12 +31,21 @@ module ActiveEntity
 
       # Returns the primary key column's value before type cast.
       def id_before_type_cast
-        read_attribute_before_type_cast(@primary_key)
+        attribute_before_type_cast(@primary_key)
       end
 
       # Returns the primary key column's previous value.
       def id_was
         attribute_was(@primary_key)
+      end
+
+      # Returns the primary key column's value from the database.
+      def id_in_database
+        attribute_in_database(@primary_key)
+      end
+
+      def id_for_database # :nodoc:
+        @attributes[@primary_key].value_for_database
       end
 
       private
@@ -88,7 +97,8 @@ module ActiveEntity
           #
           #   Project.primary_key # => "foo_id"
           def primary_key=(value)
-            @primary_key = value && -value.to_s
+            @primary_key        = value && -value.to_s
+            @attributes_builder = nil
           end
         end
     end

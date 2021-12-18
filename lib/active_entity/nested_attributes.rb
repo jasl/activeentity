@@ -5,7 +5,7 @@ require "active_support/core_ext/module/redefine_method"
 require "active_support/core_ext/hash/indifferent_access"
 
 module ActiveEntity
-  module NestedAttributes #:nodoc:
+  module NestedAttributes # :nodoc:
     class TooManyRecords < ActiveEntityError
     end
 
@@ -180,7 +180,7 @@ module ActiveEntity
     #   member.posts.second.title # => '[UPDATED] other post'
     #
     # However, the above applies if the parent model is being updated as well.
-    # For example, If you wanted to create a +member+ named _joe_ and wanted to
+    # For example, if you wanted to create a +member+ named _joe_ and wanted to
     # update the +posts+ at the same time, that would give an
     # ActiveEntity::RecordNotFound error.
     #
@@ -245,18 +245,19 @@ module ActiveEntity
     #
     # === Validating the presence of a parent model
     #
-    # If you want to validate that a child record is associated with a parent
-    # record, you can use the +validates_presence_of+ method and the +:inverse_of+
-    # key as this example illustrates:
+    # The +belongs_to+ association validates the presence of the parent model
+    # by default. You can disable this behavior by specifying <code>optional: true</code>.
+    # This can be used, for example, when conditionally validating the presence
+    # of the parent model:
     #
-    #   class Member < ActiveEntity::Base
-    #     has_many :posts, inverse_of: :member
-    #     accepts_nested_attributes_for :posts
+    #   class Veterinarian < ActiveEntity::Base
+    #     has_many :patients, inverse_of: :veterinarian
+    #     accepts_nested_attributes_for :patients
     #   end
     #
-    #   class Post < ActiveEntity::Base
-    #     belongs_to :member, inverse_of: :posts
-    #     validates_presence_of :member
+    #   class Patient < ActiveEntity::Base
+    #     belongs_to :veterinarian, inverse_of: :patients, optional: true
+    #     validates :veterinarian, presence: true, unless: -> { awaiting_intake }
     #   end
     #
     # Note that if you do not specify the +:inverse_of+ option, then
@@ -407,17 +408,19 @@ module ActiveEntity
         attributes = attributes.with_indifferent_access
         existing_record = send(association_name)
 
-        assignable_attributes = attributes.except(*UNASSIGNABLE_KEYS)
+        unless reject_new_record?(association_name, attributes)
+          assignable_attributes = attributes.except(*UNASSIGNABLE_KEYS)
 
-        if existing_record
-          existing_record.assign_attributes(assignable_attributes)
-          association(association_name).initialize_attributes(existing_record)
-        else
-          method = :"build_#{association_name}"
-          if respond_to?(method)
-            send(method, assignable_attributes)
+          if existing_record
+            existing_record.assign_attributes(assignable_attributes)
+            association(association_name).initialize_attributes(existing_record)
           else
-            raise ArgumentError, "Cannot build association `#{association_name}'. Are you trying to build a polymorphic one-to-one association?"
+            method = :"build_#{association_name}"
+            if respond_to?(method)
+              send(method, assignable_attributes)
+            else
+              raise ArgumentError, "Cannot build association `#{association_name}'. Are you trying to build a polymorphic one-to-one association?"
+            end
           end
         end
       end
@@ -479,7 +482,10 @@ module ActiveEntity
             attributes = attributes.to_h
           end
           attributes = attributes.with_indifferent_access
-          association.reader.build(attributes.except(*UNASSIGNABLE_KEYS))
+
+          unless reject_new_record?(association_name, attributes)
+            association.reader.build(attributes.except(*UNASSIGNABLE_KEYS))
+          end
         end
       end
 

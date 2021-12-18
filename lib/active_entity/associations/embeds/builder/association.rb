@@ -12,25 +12,26 @@
 #      - HasManyAssociation
 
 module ActiveEntity::Associations::Embeds::Builder # :nodoc:
-  class Association #:nodoc:
+  class Association # :nodoc:
     class << self
       attr_accessor :extensions
     end
     self.extensions = []
 
-    VALID_OPTIONS = [:class_name, :anonymous_class, :validate] # :nodoc:
+    VALID_OPTIONS = [:class_name, :anonymous_class, :validate, :inverse_of].freeze # :nodoc:
 
-    def self.build(model, name, options)
+    def self.build(model, name, options, &block)
       if model.dangerous_attribute_method?(name)
         raise ArgumentError, "You tried to define an association named #{name} on the model #{model.name}, but " \
                              "this will conflict with a method #{name} already defined by Active Entity. " \
                              "Please choose a different association name."
       end
 
-      reflection = create_reflection model, name, options
+      reflection = create_reflection model, name, options, &block
       define_accessors model, reflection
       define_callbacks model, reflection
       define_validations model, reflection
+      define_change_tracking_methods model, reflection
       reflection
     end
 
@@ -99,7 +100,12 @@ module ActiveEntity::Associations::Embeds::Builder # :nodoc:
       # noop
     end
 
+    def self.define_change_tracking_methods(_model, _reflection)
+      # noop
+    end
+
     private_class_method :macro, :valid_options, :validate_options, :define_extensions,
-                         :define_callbacks, :define_accessors, :define_readers, :define_writers, :define_validations
+                         :define_callbacks, :define_accessors, :define_readers, :define_writers, :define_validations,
+                         :define_change_tracking_methods
   end
 end

@@ -29,8 +29,8 @@ module ActiveEntity
       extend ActiveSupport::Concern
 
       included do
-        attribute_method_suffix "_before_type_cast"
-        attribute_method_suffix "_came_from_user?"
+        attribute_method_suffix "_before_type_cast", "_for_database", parameters: false
+        attribute_method_suffix "_came_from_user?", parameters: false
       end
 
       # Returns the value of the attribute identified by +attr_name+ before
@@ -46,7 +46,10 @@ module ActiveEntity
       #   task.read_attribute_before_type_cast('completed_on') # => "2012-10-21"
       #   task.read_attribute_before_type_cast(:completed_on)  # => "2012-10-21"
       def read_attribute_before_type_cast(attr_name)
-        attribute_before_type_cast(attr_name.to_s)
+        name = attr_name.to_s
+        name = self.class.attribute_aliases[name] || name
+
+        attribute_before_type_cast(name)
       end
 
       # Returns a hash of attributes before typecasting and deserialization.
@@ -63,11 +66,20 @@ module ActiveEntity
         @attributes.values_before_type_cast
       end
 
+      # Returns a hash of attributes for assignment to the database.
+      def attributes_for_database
+        @attributes.values_for_database
+      end
+
       private
 
         # Dispatch target for <tt>*_before_type_cast</tt> attribute methods.
         def attribute_before_type_cast(attr_name)
           @attributes[attr_name].value_before_type_cast
+        end
+
+        def attribute_for_database(attr_name)
+          @attributes[attr_name].value_for_database
         end
 
         def attribute_came_from_user?(attr_name)

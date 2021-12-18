@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module ActiveEntity
-  # = Active Entity \Persistence
-  module Persistence
+  # = Active Entity \StubPersistence
+  module StubPersistence
     extend ActiveSupport::Concern
 
     def new_record?

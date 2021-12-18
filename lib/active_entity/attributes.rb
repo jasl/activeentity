@@ -161,20 +161,75 @@ module ActiveEntity
       # to be referenced by a symbol, see ActiveEntity::Type.register. You can
       # also pass a type object directly, in place of a symbol.
       #
+      # ==== \Querying
+      #
+      # When {ActiveEntity::Base.where}[rdoc-ref:QueryMethods#where] is called, it will
+      # use the type defined by the model class to convert the value to SQL,
+      # calling +serialize+ on your type object. For example:
+      #
+      #   class Money < Struct.new(:amount, :currency)
+      #   end
+      #
+      #   class MoneyType < ActiveEntity::Type::Value
+      #     def initialize(currency_converter:)
+      #       @currency_converter = currency_converter
+      #     end
+      #
+      #     # value will be the result of +deserialize+ or
+      #     # +cast+. Assumed to be an instance of +Money+ in
+      #     # this case.
+      #     def serialize(value)
+      #       value_in_bitcoins = @currency_converter.convert_to_bitcoins(value)
+      #       value_in_bitcoins.amount
+      #     end
+      #   end
+      #
+      #   # config/initializers/types.rb
+      #   ActiveEntity::Type.register(:money, MoneyType)
+      #
+      #   # app/models/product.rb
+      #   class Product < ActiveEntity::Base
+      #     currency_converter = ConversionRatesFromTheInternet.new
+      #     attribute :price_in_bitcoins, :money, currency_converter: currency_converter
+      #   end
+      #
+      #   Product.where(price_in_bitcoins: Money.new(5, "USD"))
+      #   # => SELECT * FROM products WHERE price_in_bitcoins = 0.02230
+      #
+      #   Product.where(price_in_bitcoins: Money.new(5, "GBP"))
+      #   # => SELECT * FROM products WHERE price_in_bitcoins = 0.03412
+      #
       # ==== Dirty Tracking
       #
       # The type of an attribute is given the opportunity to change how dirty
       # tracking is performed. The methods +changed?+ and +changed_in_place?+
       # will be called from ActiveModel::Dirty. See the documentation for those
       # methods in ActiveModel::Type::Value for more details.
-      def attribute(name, cast_type = Type::Value.new, **options)
+      def attribute(name, cast_type = nil, default: NO_DEFAULT_PROVIDED, **options)
         name = name.to_s
+        name = attribute_aliases[name] || name
+
         reload_schema_from_cache
 
+        case cast_type
+        when Symbol
+          cast_type = Type.lookup(cast_type, **options)
+        when nil
+          if (prev_cast_type, prev_default = attributes_to_define_after_schema_loads[name])
+            default = prev_default if default == NO_DEFAULT_PROVIDED
+          else
+            prev_cast_type = -> subtype { subtype }
+          end
+
+          cast_type = if block_given?
+            -> subtype { yield Proc === prev_cast_type ? prev_cast_type[subtype] : prev_cast_type }
+          else
+            prev_cast_type
+          end
+        end
+
         self.attributes_to_define_after_schema_loads =
-          attributes_to_define_after_schema_loads.merge(
-            name => [cast_type, options]
-          )
+          attributes_to_define_after_schema_loads.merge(name => [cast_type, default])
       end
 
       # This is the low level API which sits beneath +attribute+. It only
@@ -193,24 +248,23 @@ module ActiveEntity
       # Otherwise, the default will be +nil+. A proc can also be passed, and
       # will be called once each time a new value is needed.
       #
+      # +user_provided_default+ Whether the default value should be cast using
       # +cast+ or +deserialize+.
       def define_attribute(
         name,
         cast_type,
-        default: NO_DEFAULT_PROVIDED
+        default: NO_DEFAULT_PROVIDED,
+        user_provided_default: true
       )
         attribute_types[name] = cast_type
-        define_default_attribute(name, default, cast_type)
+        define_default_attribute(name, default, cast_type, from_user: user_provided_default)
       end
 
       def load_schema! # :nodoc:
         super
-        attributes_to_define_after_schema_loads.each do |name, (type, options)|
-          if type.is_a?(Symbol)
-            type = ActiveEntity::Type.lookup(type, **options.except(:default))
-          end
-
-          define_attribute(name, type, **options.slice(:default))
+        attributes_to_define_after_schema_loads.each do |name, (cast_type, default)|
+          cast_type = cast_type[type_for_attribute(name)] if Proc === cast_type
+          define_attribute(name, cast_type, default: default)
         end
       end
 
@@ -219,19 +273,19 @@ module ActiveEntity
         NO_DEFAULT_PROVIDED = Object.new # :nodoc:
         private_constant :NO_DEFAULT_PROVIDED
 
-        def define_default_attribute(name, value, type)
-          default_attribute =
-            if value == NO_DEFAULT_PROVIDED
-              _default_attributes[name].with_type(type)
-            else
-              ActiveModel::Attribute::UserProvidedDefault.new(
-                name,
-                value,
-                type,
-                _default_attributes.fetch(name.to_s) { nil },
-                )
-            end
-
+        def define_default_attribute(name, value, type, from_user:)
+          if value == NO_DEFAULT_PROVIDED
+            default_attribute = _default_attributes[name].with_type(type)
+          elsif from_user
+            default_attribute = ActiveModel::Attribute::UserProvidedDefault.new(
+              name,
+              value,
+              type,
+              _default_attributes.fetch(name.to_s) { nil },
+            )
+          else
+            default_attribute = ActiveModel::Attribute.from_database(name, value, type)
+          end
           _default_attributes[name] = default_attribute
         end
     end

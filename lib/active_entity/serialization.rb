@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module ActiveEntity #:nodoc:
+module ActiveEntity # :nodoc:
   # = Active Entity \Serialization
   module Serialization
     extend ActiveSupport::Concern
@@ -11,16 +11,12 @@ module ActiveEntity #:nodoc:
     end
 
     def serializable_hash(options = nil)
-      options = options ? options.dup : {}
+      if self.class._has_attribute?(self.class.inheritance_column)
+        options = options ? options.dup : {}
 
-      include_embeds = options.delete :include_embeds
-      if include_embeds
-        includes = Array.wrap(options[:include]).concat(self.class.embeds_association_names)
-        options[:include] ||= []
-        options[:include].concat includes
+        options[:except] = Array(options[:except]).map(&:to_s)
+        options[:except] |= Array(self.class.inheritance_column)
       end
-
-      options[:except] = Array(options[:except]).map(&:to_s)
 
       super(options)
     end

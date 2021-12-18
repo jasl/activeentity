@@ -3,9 +3,9 @@
 # This class is inherited by the has_one and belongs_to association classes
 
 module ActiveEntity::Associations::Embeds::Builder # :nodoc:
-  class SingularAssociation < Association #:nodoc:
+  class SingularAssociation < Association # :nodoc:
     def self.valid_options(options)
-      super + [:inverse_of, :required]
+      super + [:required]
     end
 
     def self.define_accessors(model, reflection)
@@ -13,7 +13,7 @@ module ActiveEntity::Associations::Embeds::Builder # :nodoc:
       mixin = model.generated_association_methods
       name = reflection.name
 
-      define_constructors(mixin, name) if reflection.constructable?
+      define_constructors(mixin, name)
     end
 
     # Defines the (build|create)_association methods for belongs_to or has_one association

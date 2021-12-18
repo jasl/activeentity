@@ -7,6 +7,13 @@ module ActiveEntity
   class ActiveEntityError < StandardError
   end
 
+  # Raised when the single-table inheritance mechanism fails to locate the subclass
+  # (for example due to improper usage of column that
+  # {ActiveEntity::Base.inheritance_column}[rdoc-ref:ModelSchema::ClassMethods#inheritance_column]
+  # points to).
+  class SubclassNotFound < ActiveEntityError
+  end
+
   # Raised when an object assigned to an association has an incorrect type.
   #
   #   class Ticket < ActiveEntity::Base

@@ -140,6 +140,16 @@ You can use `enable_readonly!` and `disable_readonly!` to control the behavior.
 
 **Important: It's no effect with embeds or array attributes !!!**
 
+## Removed ActiveRecord features
+
+- CounterCache
+- DelegatedType
+- Encryption
+- SignedId
+- SecurePassword
+- SecureToken
+- TestFixtures
+
 ## Extending
 
 Most of Active Model plugins are compatible with Active Entity.

@@ -25,6 +25,7 @@ module ActiveEntity
       require "active_entity/base"
       unless ActiveSupport::Logger.logger_outputs_to?(Rails.logger, STDERR, STDOUT)
         console = ActiveSupport::Logger.new(STDERR)
+        console.level = Rails.logger.level
         Rails.logger.extend ActiveSupport::Logger.broadcast console
       end
     end
@@ -36,7 +37,6 @@ module ActiveEntity
     initializer "active_entity.initialize_timezone" do
       ActiveSupport.on_load(:active_entity) do
         self.time_zone_aware_attributes = true
-        self.default_timezone = :utc
       end
     end
 
@@ -44,13 +44,25 @@ module ActiveEntity
       ActiveSupport.on_load(:active_entity) { self.logger ||= ::Rails.logger }
     end
 
-
-    initializer "active_entity.define_attribute_methods" do |app|
-      config.after_initialize do
+    initializer "Check for cache versioning support" do
+      config.after_initialize do |app|
         ActiveSupport.on_load(:active_entity) do
-          if app.config.eager_load
-            descendants.each do |model|
-              model.define_attribute_methods
+          if app.config.active_entity.cache_versioning && Rails.cache
+            unless Rails.cache.class.try(:supports_cache_versioning?)
+              raise <<-end_error
+
+You're using a cache store that doesn't support native cache versioning.
+Your best option is to upgrade to a newer version of #{Rails.cache.class}
+that supports cache versioning (#{Rails.cache.class}.supports_cache_versioning? #=> true).
+
+Next best, switch to a different cache store that does support cache versioning:
+https://guides.rubyonrails.org/caching_with_rails.html#cache-stores.
+
+To keep using the current cache store, you can turn off cache versioning entirely:
+
+    config.active_entity.cache_versioning = false
+
+              end_error
             end
           end
         end
@@ -58,14 +70,33 @@ module ActiveEntity
     end
 
     initializer "active_entity.set_configs" do |app|
-      ActiveSupport.on_load(:active_entity) do
-        configs = app.config.active_entity
+      configs = app.config.active_entity
 
+      config.after_initialize do
         configs.each do |k, v|
-          send "#{k}=", v
+          setter = "#{k}="
+          if ActiveEntity.respond_to?(setter)
+            ActiveEntity.send(setter, v)
+          end
+        end
+      end
+
+      ActiveSupport.on_load(:active_entity) do
+        configs.each do |k, v|
+          setter = "#{k}="
+          # Some existing initializers might rely on Active Entity configuration
+          # being copied from the config object to their actual destination when
+          # `ActiveEntity::Base` is loaded.
+          # So to preserve backward compatibility we copy the config a second time.
+          if ActiveEntity.respond_to?(setter)
+            ActiveEntity.send(setter, v)
+          else
+            send(setter, v)
+          end
         end
       end
     end
+
 
     initializer "active_entity.set_filter_attributes" do
       ActiveSupport.on_load(:active_entity) do

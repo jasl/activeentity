@@ -8,6 +8,12 @@ module ActiveEntity
       extend ActiveSupport::Concern
 
       include ActiveModel::Dirty
+
+      included do
+        if self < ::ActiveEntity::Timestamp
+          raise "You cannot include Dirty after Timestamp"
+        end
+      end
     end
   end
 end

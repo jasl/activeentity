@@ -18,7 +18,7 @@ module ActiveEntity
       #     CollectionAssociation
       #       HasManyAssociation + ForeignAssociation
       #         HasManyThroughAssociation + ThroughAssociation
-      class Association #:nodoc:
+      class Association # :nodoc:
         attr_reader :owner, :target, :reflection
 
         delegate :options, to: :reflection
@@ -29,7 +29,6 @@ module ActiveEntity
           @owner, @reflection = owner, reflection
 
           @target = nil
-          @inversed = false
         end
 
         # Has the \target been already \loaded?
@@ -57,7 +56,6 @@ module ActiveEntity
 
         def inversed_from(record)
           self.target = record
-          @inversed = !!record
         end
 
         # Returns the class of the target. belongs_to polymorphic overrides this to look at the
@@ -82,12 +80,18 @@ module ActiveEntity
           @reflection = @owner.class._reflect_on_association(reflection_name)
         end
 
-        def initialize_attributes(record, attributes = {}) #:nodoc:
-          record.assign_attributes attributes if attributes.any?
+        def initialize_attributes(record, attributes = {}) # :nodoc:
+          record.send(:_assign_attributes, attributes) if attributes.any?
           set_inverse_instance(record)
         end
 
         private
+
+          # Reader and writer methods call this so that consistent errors are presented
+          # when the association target class does not exist.
+          def ensure_klass_exists!
+            klass
+          end
 
           # Raises ActiveEntity::AssociationTypeMismatch unless +record+ is of
           # the kind of the class of the associated objects. Meant to be used as
@@ -112,7 +116,7 @@ module ActiveEntity
           # Can be redefined by subclasses, notably polymorphic belongs_to
           # The record parameter is necessary to support polymorphic inverses as we must check for
           # the association in the specific class of the record.
-          def inverse_reflection_for(record)
+          def inverse_reflection_for(_record)
             reflection.inverse_of
           end
 

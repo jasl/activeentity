@@ -4,7 +4,7 @@ module ActiveEntity
   module Associations
     module Embeds
       # = Active Entity Belongs To Association
-      class EmbeddedInAssociation < SingularAssociation #:nodoc:
+      class EmbeddedInAssociation < SingularAssociation # :nodoc:
         def default(&block)
           writer(owner.instance_exec(&block)) if reader.nil?
         end
@@ -19,11 +19,10 @@ module ActiveEntity
 
             self.target = record
           end
-          # NOTE - for now, we're only supporting inverse setting from belongs_to back onto
-          # has_one associations.
+
           def invertible_for?(record)
             inverse = inverse_reflection_for(record)
-            inverse&.embeds_one?
+            inverse && (inverse.embeds_one? || inverse.klass.embeds_many_inversing)
           end
       end
     end

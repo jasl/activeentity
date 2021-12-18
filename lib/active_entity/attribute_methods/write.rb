@@ -6,7 +6,7 @@ module ActiveEntity
       extend ActiveSupport::Concern
 
       included do
-        attribute_method_suffix "="
+        attribute_method_suffix "=", parameters: "value"
       end
 
       module ClassMethods # :nodoc:
@@ -15,11 +15,13 @@ module ActiveEntity
           def define_method_attribute=(name, owner:)
             ActiveModel::AttributeMethods::AttrNames.define_attribute_accessor_method(
               owner, name, writer: true,
-              ) do |temp_method_name, attr_name_expr|
-              owner <<
-                "def #{temp_method_name}(value)" <<
-                "  _write_attribute(#{attr_name_expr}, value)" <<
-                "end"
+            ) do |temp_method_name, attr_name_expr|
+              owner.define_cached_method("#{name}=", as: temp_method_name, namespace: :active_entity) do |batch|
+                batch <<
+                  "def #{temp_method_name}(value)" <<
+                  "  _write_attribute(#{attr_name_expr}, value)" <<
+                  "end"
+              end
             end
           end
       end
@@ -32,23 +34,19 @@ module ActiveEntity
         name = self.class.attribute_aliases[name] || name
 
         name = @primary_key if name == "id" && @primary_key
+        return if attr_readonly_enabled? && readonly_attribute?(name)
         @attributes.write_from_user(name, value)
       end
 
       # This method exists to avoid the expensive primary_key check internally, without
       # breaking compatibility with the write_attribute API
       def _write_attribute(attr_name, value) # :nodoc:
+        return if attr_readonly_enabled? && readonly_attribute?(attr_name)
         @attributes.write_from_user(attr_name, value)
       end
 
       alias :attribute= :_write_attribute
       private :attribute=
-
-      private
-
-        def write_attribute_without_type_cast(attr_name, value)
-          @attributes.write_cast_value(attr_name, value)
-        end
     end
   end
 end

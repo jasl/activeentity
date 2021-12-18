@@ -7,14 +7,17 @@ en:
   # Default error messages
   errors:
     messages:
-      non_subset: "is not subset of the given list"
-      duplicated: "duplicated"
+      required: "must exist"
+      taken: "has already been taken"
 
   # Active Entity models configuration
-  active_entity:
+  ActiveEntity:
     errors:
       messages:
         record_invalid: "Validation failed: %{errors}"
+        restrict_dependent_destroy:
+          has_one: "Cannot delete record because a dependent %{record} exists"
+          has_many: "Cannot delete record because dependent %{record} exist"
         # Append your own errors here or at the model/attributes scope.
 
       # You can define own errors for models or model attributes.

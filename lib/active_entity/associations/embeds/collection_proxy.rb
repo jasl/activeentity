@@ -42,7 +42,7 @@ module ActiveEntity
                  :to_sentence, :to_formatted_s, :as_json,
                  :shuffle, :split, :slice, :index, :rindex, :size, to: :records
 
-        def initialize(klass, association)
+        def initialize(klass, association, **)
           @klass = klass
 
           @association = association
@@ -50,24 +50,6 @@ module ActiveEntity
           extensions = association.extensions
           extend(*extensions) if extensions.any?
         end
-
-        # Initializes new record from relation while maintaining the current
-        # scope.
-        #
-        # Expects arguments in the same format as {ActiveEntity::Base.new}[rdoc-ref:Core.new].
-        #
-        #   users = User.where(name: 'DHH')
-        #   user = users.new # => #<User id: nil, name: "DHH", created_at: nil, updated_at: nil>
-        #
-        # You can also pass a block to new with the new record as argument:
-        #
-        #   user = users.new { |user| user.name = 'Oscar' }
-        #   user.name # => Oscar
-        def new(attributes = nil, &block)
-          klass.new(attributes, &block)
-        end
-
-        alias build new
 
         def pretty_print(q)
           q.pp(records)

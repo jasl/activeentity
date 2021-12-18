@@ -1,20 +1,42 @@
 # frozen_string_literal: true
 
-require "active_model/type/registry"
-
 module ActiveEntity
   # :stopdoc:
   module Type
-    class Registry < ActiveModel::Type::Registry
-      def add_modifier(options, klass, **args)
-        registrations << DecorationRegistration.new(options, klass, **args)
+    class Registry # :nodoc:
+      def initialize
+        @registrations = []
+      end
+
+      def initialize_copy(_other)
+        @registrations = @registrations.dup
+      end
+
+      def add_modifier(options, klass, **_args)
+        registrations << DecorationRegistration.new(options, klass)
+      end
+
+      def register(type_name, klass = nil, **options, &block)
+        unless block_given?
+          block = proc { |_, *args| klass.new(*args) }
+          block.ruby2_keywords if block.respond_to?(:ruby2_keywords)
+        end
+        registrations << Registration.new(type_name, block, **options)
+      end
+
+      def lookup(symbol, *args, **kwargs)
+        registration = find_registration(symbol, *args, **kwargs)
+
+        if registration
+          registration.call(self, symbol, *args, **kwargs)
+        else
+          raise ArgumentError, "Unknown type #{symbol.inspect}"
+        end
       end
 
       private
 
-        def registration_klass
-          Registration
-        end
+        attr_reader :registrations
 
         def find_registration(symbol, *args, **kwargs)
           registrations
@@ -23,7 +45,7 @@ module ActiveEntity
         end
     end
 
-    class Registration
+    class Registration # :nodoc:
       def initialize(name, block, override: nil)
         @name = name
         @block = block
@@ -31,11 +53,7 @@ module ActiveEntity
       end
 
       def call(_registry, *args, **kwargs)
-        if kwargs.any? # https://bugs.ruby-lang.org/issues/10856
-          block.call(*args, **kwargs)
-        else
-          block.call(*args)
-        end
+        block.call(*args, **kwargs)
       end
 
       def matches?(type_name, *args, **kwargs)
@@ -51,12 +69,16 @@ module ActiveEntity
         attr_reader :name, :block, :override
 
         def priority
-          override ? 1 : 0
+          result = 0
+          if override
+            result |= 2
+          end
+          result
         end
     end
 
-    class DecorationRegistration < Registration
-      def initialize(options, klass, **)
+    class DecorationRegistration < Registration # :nodoc:
+      def initialize(options, klass)
         @options = options
         @klass = klass
       end
@@ -86,7 +108,5 @@ module ActiveEntity
     end
   end
 
-  class TypeConflictError < StandardError
-  end
   # :startdoc:
 end

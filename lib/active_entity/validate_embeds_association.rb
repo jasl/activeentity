@@ -130,7 +130,7 @@ module ActiveEntity
   module ValidateEmbedsAssociation
     extend ActiveSupport::Concern
 
-    module AssociationBuilderExtension #:nodoc:
+    module AssociationBuilderExtension # :nodoc:
       def self.build(model, reflection)
         model.send(:add_embeds_associations_validation_callbacks, reflection)
       end
