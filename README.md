@@ -123,7 +123,6 @@ end
 These Active Record feature also available in Active Entity
 
 - [`composed_of`](https://api.rubyonrails.org/classes/ActiveRecord/Aggregations/ClassMethods.html)
-- [`enum`](https://api.rubyonrails.org/v5.2.2/classes/ActiveRecord/Enum.html) (You must declare the attribute before using `enum`)
 - [`serializable_hash`](https://api.rubyonrails.org/classes/ActiveModel/Serialization.html#method-i-serializable_hash)
 - [`serialize`](https://api.rubyonrails.org/classes/ActiveRecord/AttributeMethods/Serialization/ClassMethods.html#method-i-serialize)
 - [`store`](https://api.rubyonrails.org/classes/ActiveRecord/Store.html)
@@ -131,6 +130,69 @@ These Active Record feature also available in Active Entity
 #### I18n
 
 Same to [Active Record I18n](https://guides.rubyonrails.org/i18n.html#translations-for-active-record-models), the only different is the root of locale YAML is `active_entity` instead of `activerecord`
+
+#### Enum
+
+You can use the `enum` class method to define a set of possible values for an attribute. It is similar to the `enum` functionality in Active Model, but has significant enough quirks that you should think of them as distinct.
+
+```rb
+class Example < ActiveEntity::Base
+  attribute :steve, :integer
+  enum steve: [:martin, :carell, :buscemi]
+end
+
+example = Example.new
+example.attributes # => {"steve"=>nil}
+example.steve = :carell
+example.carell? # => true
+example.attributes # => {"steve"=>"carell"}
+example.steve = 2
+example.attributes # => {"steve"=>"buscemi"}
+
+# IMPORTANT: the next line will only work if you implement an update! method
+example.martin! # => {"steve"=>"martin"}
+
+example.steve = :bannon # ArgumentError ('bannon' is not a valid steve)
+```
+
+The first thing you'll notice about the `:steve` attribute is that it is an "Integer", even though it might seem logical to define it as a String... TL;DR: don't do this. Internally enum tracks the possible values based on their index position in the array.
+
+It's also possible to provide a Hash of possible values:
+
+```rb
+class Example < ActiveEntity::Base
+  attribute :steve, :integer, default: 9
+  enum steve: {martin: 5, carell: 12, buscemi: 9}
+end
+
+example = Example.new
+example.attributes # => {"steve"=>"buscemi"}
+```
+
+The other quirk of this implementation is that you must create your attribute before you call enum.
+enum does not create the search scopes that might be familar to Active Model users, since there is no search or where concept in Active Entity. You can, however, access the mapping directly to obtain the index number for a given value:
+
+```rb
+Example.steves[:buscemi] # => 9
+```
+
+You can define prefixes and suffixes for your `enum` attributes. Note the underscores:
+
+```rb
+class Conversation < ActiveEntity::Base
+  attribute :status, :integer
+  attribute :comments_status, :integer
+  enum status: [ :active, :archived ], _suffix: true
+  enum comments_status: [ :active, :inactive ], _prefix: :comments
+end
+
+conversation = Conversation.new
+conversation.active_status! # only if you have an update! method
+conversation.archived_status? # => false
+
+conversation.comments_inactive! # only if you have an update! method
+conversation.comments_active? # => false
+```
 
 #### Read-only attributes
 
