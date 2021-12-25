@@ -53,12 +53,6 @@ module ActiveEntity
             # Hack the record
             normalized_attribute = normalize_attribute(attribute, indexed_attribute, association_or_value.index(r), key)
             record.errors.import r.errors.where(key).first, attribute: normalized_attribute
-
-            # record.errors[normalized_attribute].merge! r.errors.messages[key]
-            # record.errors[normalized_attribute].uniq!
-            #
-            # record.errors.details[normalized_attribute.to_sym] << r.errors.details[key]
-            # record.errors.details[normalized_attribute.to_sym].uniq!
           elsif key.is_a? Array
             key.each do |attr|
               r.errors.add(attr, :duplicated, **options)
@@ -66,12 +60,6 @@ module ActiveEntity
               # Hack the record
               normalized_attribute = normalize_attribute(attribute, indexed_attribute, association_or_value.index(r), attr)
               record.errors.import r.errors.where(key).first, attribute: normalized_attribute
-
-              # record.errors[normalized_attribute].concat r.errors.messages[attr]
-              # record.errors[normalized_attribute].uniq!
-              #
-              # record.errors.details[normalized_attribute.to_sym].concat r.errors.details[attr]
-              # record.errors.details[normalized_attribute.to_sym].uniq!
             end
           end
         end
