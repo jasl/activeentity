@@ -93,11 +93,11 @@ class Reviewer < ActiveEntity::Base
 end
 
 class Book < ActiveEntity::Base
-  embeds_many :categories
+  embeds_many :categories, index_errors: true
   validates :categories, uniqueness_in_embeds: {key: :name}
 
   embeds_many :reviewers
-  validates :categories, uniqueness_in_embeds: {key: [:first_name, :last_name]}
+  validates :reviewers, uniqueness_in_embeds: {key: [:first_name, :last_name]}
 end
 ```
 
