@@ -9,7 +9,7 @@ module ActiveEntity
         private
 
           def define_method_attribute(name, owner:)
-            ActiveEntity::AttributeMethods::AttrNames.define_attribute_accessor_method(
+            ActiveEntity::AMAttributeMethods::AttrNames.define_attribute_accessor_method(
               owner, name
             ) do |temp_method_name, attr_name_expr|
               owner <<

@@ -201,6 +201,7 @@ module ActiveEntity
       )
         attribute_types[name] = cast_type
         define_default_attribute(name, default, cast_type)
+        define_attribute_method(name)
       end
 
       def load_schema! # :nodoc:
