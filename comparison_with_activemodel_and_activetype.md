@@ -8,17 +8,17 @@ You can make your "BaseFormObject":
 class BaseFormObject
   # Acts as Active Model
   # includes Rails integration and Validation
-  include ActiveModel::Base
-  
-  # Enable Attribute API 
+  include ActiveModel::Model
+
+  # Enable Attribute API
   # <https://api.rubyonrails.org/classes/ActiveRecord/Attributes/ClassMethods.html#method-i-attribute>
   # <https://bigbinary.com/blog/rails-5-attributes-api>
   include ActiveModel::Attributes
-  
+
   # (Optional) Enable dirty tracking
   # <https://api.rubyonrails.org/classes/ActiveModel/Dirty.html>
   include ActiveModel::Dirty
-  
+
   # (Optional) Enable serialization
   # e.g. dump attributes to hash or JSON
   include ActiveModel::Serialization
@@ -31,7 +31,7 @@ Usage:
 class Book < BaseFormObject
   attribute :title, :string
   attribute :score, :integer
-  
+
   validates :title, presence: true
   validates :score, numericality: { only_integer: true }
 end
@@ -81,7 +81,7 @@ you can just define a `class` to do that.
 ```ruby
 class Post
   attr_reader :title, :body
-  
+
   # Initializer, attribute writers, methods, etc.
 end
 ```
@@ -92,7 +92,7 @@ But we're on Rails, compared to Active Record model, it's lacking:
 - Validation
 - Integrate with Rails, the most part is integrate with Strong parameter, form helpers and I18n
 
-### ActiveModel::Base
+### ActiveModel::Model
 
 Since Rails 4, Active Record has extracted the Rails integration layer called Active Model, it defined essential interfaces that how controller and view helpers can interact with the model.
 
@@ -104,7 +104,7 @@ I recommend read it first, here I want to explain what features contains in `Act
   module Model
     # It's a Mixin
     extend ActiveSupport::Concern
-    
+
     # Provides `write_attribute`, `read_attribute` and `assign_attributes` methods as unify attribute accessor,
     # other extensions will depend on this
     include ActiveModel::AttributeAssignment
