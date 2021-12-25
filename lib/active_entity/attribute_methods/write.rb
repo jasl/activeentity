@@ -13,7 +13,7 @@ module ActiveEntity
         private
 
           def define_method_attribute=(name, owner:)
-            ActiveModel::AttributeMethods::AttrNames.define_attribute_accessor_method(
+            ActiveEntity::AttributeMethods::AttrNames.define_attribute_accessor_method(
               owner, name, writer: true,
               ) do |temp_method_name, attr_name_expr|
               owner <<

@@ -23,6 +23,44 @@ module ActiveEntity
 
     RESTRICTED_CLASS_METHODS = %w(private public protected allocate new name parent superclass)
 
+    # Port from ActiveModel https://github.com/rails/rails/blob/df475877efdcf74d7524f734ab8ad1d4704fd187/activemodel/lib/active_model/attribute_methods.rb#L518-L553
+    module AttrNames # :nodoc:
+      DEF_SAFE_NAME = /\A[a-zA-Z_]\w*\z/
+
+      # We want to generate the methods via module_eval rather than
+      # define_method, because define_method is slower on dispatch.
+      # Evaluating many similar methods may use more memory as the instruction
+      # sequences are duplicated and cached (in MRI).  define_method may
+      # be slower on dispatch, but if you're careful about the closure
+      # created, then define_method will consume much less memory.
+      #
+      # But sometimes the database might return columns with
+      # characters that are not allowed in normal method names (like
+      # 'my_column(omg)'. So to work around this we first define with
+      # the __temp__ identifier, and then use alias method to rename
+      # it to what we want.
+      #
+      # We are also defining a constant to hold the frozen string of
+      # the attribute name. Using a constant means that we do not have
+      # to allocate an object on each call to the attribute method.
+      # Making it frozen means that it doesn't get duped when used to
+      # key the @attributes in read_attribute.
+      def self.define_attribute_accessor_method(owner, attr_name, writer: false)
+        method_name = "#{attr_name}#{'=' if writer}"
+        if attr_name.ascii_only? && DEF_SAFE_NAME.match?(attr_name)
+          yield method_name, "'#{attr_name}'"
+        else
+          safe_name = attr_name.unpack1("h*")
+          const_name = "ATTR_#{safe_name}"
+          const_set(const_name, attr_name) unless const_defined?(const_name)
+          temp_method_name = "__temp__#{safe_name}#{'=' if writer}"
+          attr_name_expr = "::ActiveModel::AttributeMethods::AttrNames::#{const_name}"
+          yield temp_method_name, attr_name_expr
+          owner.rename_method(temp_method_name, method_name)
+        end
+      end
+    end
+
     class GeneratedAttributeMethods < Module #:nodoc:
       include Mutex_m
     end
@@ -172,6 +210,25 @@ module ActiveEntity
       def _has_attribute?(attr_name) # :nodoc:
         attribute_types.key?(attr_name)
       end
+
+      # Port https://github.com/rails/rails/blob/df475877efdcf74d7524f734ab8ad1d4704fd187/activemodel/lib/active_model/attribute_methods.rb#L108-L111
+      def define_attribute_methods(*attr_names)
+        CodeGenerator.batch(generated_attribute_methods, __FILE__, __LINE__) do |owner|
+          attr_names.flatten.each { |attr_name| define_attribute_method(attr_name, _owner: owner) }
+        end
+      end
+
+      # https://github.com/rails/rails/blob/df475877efdcf74d7524f734ab8ad1d4704fd187/activemodel/lib/active_model/attribute_methods.rb#L208-L217
+      def alias_attribute(new_name, old_name)
+        self.attribute_aliases = attribute_aliases.merge(new_name.to_s => old_name.to_s)
+        CodeGenerator.batch(self, __FILE__, __LINE__) do |owner|
+          attribute_method_matchers.each do |matcher|
+            matcher_new = matcher.method_name(new_name).to_s
+            matcher_old = matcher.method_name(old_name).to_s
+            define_proxy_call false, owner, matcher_new, matcher_old
+          end
+        end
+      end
     end
 
     # Returns +true+ if the given attribute is in the attributes hash, otherwise +false+.
@@ -298,6 +355,47 @@ module ActiveEntity
     end
 
     private
+
+      # Port https://github.com/rails/rails/blob/df475877efdcf74d7524f734ab8ad1d4704fd187/activemodel/lib/active_model/attribute_methods.rb#L338-L376
+      class CodeGenerator
+        class << self
+          def batch(owner, path, line)
+            if owner.is_a?(CodeGenerator)
+              yield owner
+            else
+              instance = new(owner, path, line)
+              result = yield instance
+              instance.execute
+              result
+            end
+          end
+        end
+
+        def initialize(owner, path, line)
+          @owner = owner
+          @path = path
+          @line = line
+          @sources = ["# frozen_string_literal: true\n"]
+          @renames = {}
+        end
+
+        def <<(source_line)
+          @sources << source_line
+        end
+
+        def rename_method(old_name, new_name)
+          @renames[old_name] = new_name
+        end
+
+        def execute
+          @owner.module_eval(@sources.join(";"), @path, @line - 1)
+          @renames.each do |old_name, new_name|
+            @owner.alias_method new_name, old_name
+            @owner.undef_method old_name
+          end
+        end
+      end
+      private_constant :CodeGenerator
 
       def attribute_method?(attr_name)
         # We check defined? because Syck calls respond_to? before actually calling initialize.

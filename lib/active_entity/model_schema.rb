@@ -86,16 +86,31 @@ module ActiveEntity
           @load_schema_invoked = true
         end
 
-        def reload_schema_from_cache
-          @attribute_types = nil
-          @default_attributes = nil
-          @attributes_builder = nil
-          @schema_loaded = false
-          @load_schema_invoked = false
-          @attribute_names = nil
-          @yaml_encoder = nil
-          direct_descendants.each do |descendant|
-            descendant.send(:reload_schema_from_cache)
+        if ActiveSupport::VERSION::MAJOR >= 7
+          def reload_schema_from_cache
+            @attribute_types = nil
+            @default_attributes = nil
+            @attributes_builder = nil
+            @schema_loaded = false
+            @load_schema_invoked = false
+            @attribute_names = nil
+            @yaml_encoder = nil
+            subclasses.each do |descendant|
+              descendant.send(:reload_schema_from_cache)
+            end
+          end
+        else
+          def reload_schema_from_cache
+            @attribute_types = nil
+            @default_attributes = nil
+            @attributes_builder = nil
+            @schema_loaded = false
+            @load_schema_invoked = false
+            @attribute_names = nil
+            @yaml_encoder = nil
+            direct_descendants.each do |descendant|
+              descendant.send(:reload_schema_from_cache)
+            end
           end
         end
     end

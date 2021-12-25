@@ -151,7 +151,7 @@ module ActiveEntity
             ActiveSupport::Dependencies.constantize(type_name)
           else
             type_candidate = @_type_candidates_cache[type_name]
-            if type_candidate && type_constant = ActiveSupport::Dependencies.safe_constantize(type_candidate)
+            if type_candidate && type_constant = type_candidate.safe_constantize
               return type_constant
             end
 
@@ -161,7 +161,7 @@ module ActiveEntity
             candidates << type_name
 
             candidates.each do |candidate|
-              constant = ActiveSupport::Dependencies.safe_constantize(candidate)
+              constant = candidate.safe_constantize
               if candidate == constant.to_s
                 @_type_candidates_cache[type_name] = candidate
                 return constant
