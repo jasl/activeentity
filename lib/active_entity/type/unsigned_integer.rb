@@ -6,7 +6,7 @@ module ActiveEntity
       private
 
         def max_value
-          super * 2
+          ::Float::INFINITY
         end
 
         def min_value
